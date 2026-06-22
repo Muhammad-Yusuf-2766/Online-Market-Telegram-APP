@@ -1,0 +1,42 @@
+---
+description: pnpm workspace commands cheat-sheet
+alwaysApply: true
+---
+
+# Commands (run from repo root)
+
+## Dev
+
+- `pnpm dev:api` — NestJS watch mode
+- `pnpm dev:web` — Vite mini app (port 5173)
+- `pnpm dev:admin` — Vite admin panel
+- `pnpm dev:web:tunnel` — web + ngrok for Telegram testing
+
+## Test
+
+- `pnpm test` — root Jest (all API unit specs)
+- `pnpm test:api` — API unit tests only
+- `pnpm test:api:e2e` — API e2e tests
+- `pnpm test:api:cov` — API coverage
+
+## Database (API)
+
+- `pnpm --filter api db:migrate:dev --name <change>` — create migration
+- `pnpm --filter api db:generate` — regenerate Prisma client
+- `pnpm --filter api db:seed` — run seed
+- `pnpm --filter api db:studio` — Prisma Studio
+
+## Railway
+
+- Deploy guide: `railway/README.md` (Postgres plugin + api/web/admin; set `RAILWAY_CONFIG_FILE` per service)
+
+## Docker
+
+- `pnpm docker:up` — Postgres + MinIO (dev)
+- `pnpm docker:test-db` — test database for e2e
+- `pnpm docker:test-db:down` — tear down test DB
+
+## Build / lint
+
+- `pnpm build` — build all apps
+- `pnpm -r run lint` — lint all apps

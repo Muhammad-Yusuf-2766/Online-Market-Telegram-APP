@@ -1,0 +1,57 @@
+.tma-top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 400;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  background: var(--pb-surface);
+  border-bottom: 1px solid var(--pb-border);
+}
+
+.tma-top-bar__brand {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--pb-text);
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.tma-top-bar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.tma-top-bar__coins {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--pb-border);
+  background: var(--pb-surface-2, #f4f4f5);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pb-text);
+  cursor: pointer;
+  text-decoration: none;
+  max-width: 160px;
+}
+
+.tma-top-bar__coins:hover {
+  opacity: 0.92;
+}
+
+.tma-top-bar__coins-icon {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--pb-accent, #d4a853);
+}

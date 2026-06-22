@@ -1,0 +1,33 @@
+---
+description: Admin panel frontend conventions
+globs: apps/admin/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Admin — Panel
+
+## Layout
+
+Desktop-first: sidebar navigation + main content area. Protected routes redirect unauthenticated users to login.
+
+## UI
+
+- Components: Mantine v7 (`@mantine/core`, `@mantine/dates`, `@mantine/charts`).
+- Icons: `@tabler/icons-react`.
+- Notifications: `@mantine/notifications`.
+- PostCSS: `postcss-preset-mantine` for Mantine styles.
+
+## State
+
+- Server state: RTK Query with **admin JWT only** — never reuse the user (Telegram) JWT.
+- Local UI state in Redux slices where needed.
+
+## Tables and forms
+
+- Server-side pagination, sorting, and filters aligned with API query params.
+- Date ranges on dashboard charts via `@mantine/dates` DatePicker.
+- Use Mantine `Table`, `TextInput`, `Select`, `Modal` for CRUD flows.
+
+## Realtime
+
+- Socket.io client (`socket.io-client`) for live order updates where wired.

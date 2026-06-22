@@ -1,0 +1,27 @@
+---
+description: Parfumbox monorepo map and golden rules
+alwaysApply: true
+---
+
+# Parfumbox — Project
+
+pnpm monorepo with three apps:
+
+- `apps/api` — NestJS + Prisma + MinIO
+- `apps/web` — Telegram Mini App (Vite + React + RTK Query)
+- `apps/admin` — Admin panel (Vite + React + Mantine)
+
+## Golden rules
+
+- Never edit `dist/`, `node_modules/`, `coverage/`, or `pnpm-lock.yaml` by hand.
+- Never commit secrets (bot token, JWT secrets, MinIO keys).
+- Prefer `pnpm --filter <app> <script>` over `cd apps/x && npm …`.
+- Read architecture docs before large changes:
+  - `docs/BACKEND_ARCHITECTURE.md`
+  - `docs/FRONTEND_ARCHITECTURE.md`
+  - `docs/DEVOPS.md`
+  - `docs/PRODUCT_ARCHITECTURE.md`
+
+## API domains
+
+One folder per domain under `apps/api/src/` (e.g. `auth/`, `products/`, `orders/`, `cart/`). Admin routes live under `admin-*` modules with separate JWT guards.

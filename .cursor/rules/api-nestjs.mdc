@@ -1,0 +1,40 @@
+---
+description: NestJS API conventions for apps/api/src
+globs: apps/api/src/**/*.ts
+alwaysApply: false
+---
+
+# API — NestJS
+
+## Module layout
+
+One folder per domain under `apps/api/src/` (e.g. `auth/`, `products/`, `orders/`, `cart/`). Each module has `*.module.ts`, `*.service.ts`, `*.controller.ts`, and DTOs.
+
+Admin routes use `admin-*` modules with separate JWT guards — never mix with user (Telegram) guards.
+
+## DTOs and validation
+
+- Use `class-validator` DTOs for every input.
+- Throw `HttpException` with consistent shape (`statusCode`, `message`, `error`).
+- Validate Telegram `initData` failures with 401.
+
+## Auth
+
+Two separate domains:
+
+1. **User** — `POST /auth/telegram` validates `initData`, issues user JWT.
+2. **Admin** — `POST /admin/auth/login` issues admin JWT.
+
+Guards and token types must not be interchangeable.
+
+## Prisma
+
+- Access DB via injected `PrismaService`.
+- Wrap multi-write flows (orders, inventory) in `$transaction`.
+- Do not import `@prisma/client` types directly in controllers — use DTOs.
+
+## Side effects
+
+- File uploads → `storage/` service (MinIO).
+- Telegram notifications → `telegram/` service.
+- Realtime events → `realtime/` service.

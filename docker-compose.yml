@@ -1,0 +1,131 @@
+# Parfumbox stack: Postgres + MinIO + API + Telegram mini app (web) + Admin panel.
+# Usage (from repo root): docker compose up --build
+#
+# Railway.com: use railway/README.md (separate Postgres + per-service Docker builds).
+#
+# URLs (host):
+#   API:    http://localhost:3000   (Swagger: http://localhost:3000/docs)
+#   Web:    http://localhost:8080
+#   Admin:  http://localhost:8081
+#   MinIO:  http://localhost:9000   (S3 API)
+#   MinIO:  http://localhost:9001   (Console: minioadmin / minioadmin)
+#
+# Default admin login (from seed): see apps/api/prisma/seed.ts (override with SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD)
+#
+# Optional: copy to .env next to this file and set TELEGRAM_BOT_TOKEN, JWT secrets, etc.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: parfumbox
+    volumes:
+      - parfumbox_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - parfumbox_minio:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # One-shot bootstrap: create the bucket and grant anonymous download for product images.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_BUCKET: ${MINIO_BUCKET:-parfumbox}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do
+          echo "waiting for minio..."
+          sleep 2
+        done
+        mc mb --ignore-existing local/$$MINIO_BUCKET
+        mc anonymous set download local/$$MINIO_BUCKET
+        echo "MinIO bucket '$$MINIO_BUCKET' is ready (public download)."
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    env_file:
+      - ./apps/api/.env
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/parfumbox?schema=public
+      NODE_ENV: production
+      PORT: '3000'
+      JWT_SECRET: ${JWT_SECRET:-change-me-user-jwt-docker}
+      JWT_EXPIRES_IN: 7d
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-change-me-admin-jwt-docker}
+      ADMIN_JWT_EXPIRES_IN: 1d
+      TELEGRAM_INIT_DATA_MAX_AGE_SEC: '86400'
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173,http://localhost:5174,http://localhost:8081,http://127.0.0.1:8080,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:8081
+      # MinIO (S3-compatible). Endpoint must be reachable from the BROWSER because the
+      # presigned PUT URL is opened directly by the admin client.
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://localhost}
+      MINIO_PORT: '9000'
+      MINIO_USE_SSL: 'false'
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-parfumbox}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
+      MINIO_PRESIGN_EXPIRES_SEC: '3600'
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: .
+      dockerfile: docker/admin/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - '8081:80'
+    depends_on:
+      - api
+
+volumes:
+  parfumbox_pg:
+  parfumbox_minio:

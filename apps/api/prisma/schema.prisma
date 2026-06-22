@@ -1,0 +1,721 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserGender {
+  UNSPECIFIED
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum UserTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+/// Telegram mini-app user; keyed by Telegram account id.
+model User {
+  id        String @id @default(cuid())
+  telegramId String @unique
+  telegramUsername String?
+  firstName String?
+  lastName  String?
+  /// Mini-app / Telegram UI language: ru | uz (used for bot messages).
+  locale    String    @default("uz")
+  phone     String?
+  birthDate DateTime? @db.Date
+  gender    UserGender @default(UNSPECIFIED)
+
+  /// Short shareable code for referral deep links (ref_<code>).
+  referralCode     String  @unique @default(cuid())
+  referredByUserId String?
+  campaignId       String?
+
+  coinBalance Int @default(0)
+
+  profileBonusBirthdateDone Boolean @default(false)
+  profileBonusGenderDone    Boolean @default(false)
+  profileBonusLastNameDone  Boolean @default(false)
+  /// One-time bonus when phone, first name, last name, birth date, and gender are all set.
+  profileBonusFullDone      Boolean @default(false)
+
+  /// Last time user dismissed coin celebration inbox (entries after this are "unread").
+  coinInboxAckAt DateTime?
+  tier          UserTier @default(BRONZE)
+  tierComputedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  referredBy User?  @relation("UserReferrals", fields: [referredByUserId], references: [id], onDelete: SetNull)
+  referrals  User[]  @relation("UserReferrals")
+  campaign   TrafficCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  orders                   Order[]
+  coinLedger               CoinLedgerEntry[]
+  adminCoinGifts           AdminCoinGift[]
+  referralRewardsAsReferrer ReferralReward[] @relation("ReferralRewardReferrer")
+  referralRewardAsReferee   ReferralReward?  @relation("ReferralRewardReferee")
+  productFeedbacks          ProductFeedback[]
+  analyticsEvents           AnalyticsEvent[]
+  cart                      Cart?
+  wishlistItems             Wishlist[]
+  promoRedemptions          PromoRedemption[]
+  segmentMemberships        UserSegmentMembership[]
+  broadcastLogs             BroadcastLog[]
+  userNotifications         UserNotification[]
+}
+
+enum AnalyticsEventType {
+  APP_OPEN
+  PRODUCT_VIEW
+  SEARCH
+  ADD_TO_CART
+  REMOVE_FROM_CART
+  CHECKOUT_START
+  CHECKOUT_SUBMIT
+  ORDER_CREATED
+  WISHLIST_ADD
+  COIN_TOGGLE
+  CAMPAIGN_LANDED
+}
+
+model AnalyticsEvent {
+  id          String             @id @default(cuid())
+  eventType   AnalyticsEventType
+  userId      String?
+  sessionId   String
+  productId   String?
+  orderId     String?
+  searchQuery String?
+  properties  Json?
+  userAgent   String?
+  tmaPlatform String?
+  createdAt   DateTime           @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([eventType, createdAt])
+  @@index([userId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([productId, createdAt])
+}
+
+enum ProductFeedbackStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Admin panel account (separate from Telegram users).
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String?
+  isActive     Boolean  @default(true)
+  roleId       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  role              Role?                 @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  directPermissions AdminUserPermission[]
+  notificationReads AdminNotificationRead[]
+  coinGiftsCreated    AdminCoinGift[]       @relation("AdminCoinGiftCreator")
+}
+
+/// RBAC permission (system-seeded or custom).
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles      RolePermission[]
+  adminUsers AdminUserPermission[]
+}
+
+/// RBAC role (system-seeded or custom).
+model Role {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  name         String
+  description  String?
+  isSystem     Boolean  @default(false)
+  isSuperAdmin Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  permissions RolePermission[]
+  adminUsers  AdminUser[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model AdminUserPermission {
+  adminUserId  String
+  permissionId String
+
+  adminUser  AdminUser  @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([adminUserId, permissionId])
+}
+
+enum AdminNotificationKind {
+  ORDER_CREATED
+  ORDER_UPDATED
+}
+
+model AdminNotification {
+  id        String                @id @default(cuid())
+  kind      AdminNotificationKind
+  orderId   String
+  createdAt DateTime              @default(now())
+
+  reads AdminNotificationRead[]
+
+  @@index([createdAt])
+}
+
+model AdminNotificationRead {
+  id               String   @id @default(cuid())
+  notificationId String
+  adminUserId    String
+  readAt         DateTime @default(now())
+
+  notification AdminNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  admin        AdminUser           @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, adminUserId])
+  @@index([adminUserId])
+}
+
+/// Single row: configurable coin rewards (admin-editable).
+model RewardSettings {
+  id String @id @default("singleton")
+
+  referralCoins          Int @default(0)
+  profileBirthdayCoins   Int @default(0)
+  profileGenderCoins     Int @default(0)
+  profileLastNameCoins   Int @default(0)
+  profileFullCoins       Int @default(0)
+  bronzeCoinMultiplier   Float @default(1.0)
+  silverCoinMultiplier   Float @default(1.05)
+  goldCoinMultiplier     Float @default(1.1)
+  platinumCoinMultiplier Float @default(1.15)
+  silverReferralCoins    Int   @default(0)
+  goldReferralCoins      Int   @default(0)
+  platinumReferralCoins  Int   @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+enum CoinLedgerKind {
+  CHECKOUT_SPEND
+  ORDER_CANCEL_REFUND
+  REFERRAL_EARNED
+  PROFILE_BONUS
+  ADMIN_GIFT
+  ADMIN_ADJUSTMENT
+}
+
+model CoinLedgerEntry {
+  id        String         @id @default(cuid())
+  userId    String
+  delta     Int
+  kind      CoinLedgerKind
+  metadata  Json?
+  createdAt DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([kind])
+}
+
+/// One row per referee after referrer was paid (first qualifying order).
+model ReferralReward {
+  id         String   @id @default(cuid())
+  referrerId String
+  refereeId  String   @unique
+  orderId    String
+  coins      Int
+  createdAt  DateTime @default(now())
+
+  referrer User @relation("ReferralRewardReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  User @relation("ReferralRewardReferee", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+}
+
+model TrafficCampaign {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  users User[]
+}
+
+model AdminCoinGift {
+  id               String   @id @default(cuid())
+  title            String
+  description      String   @default("")
+  imageUrl         String   @default("")
+  coins            Int
+  targetUserId     String
+  createdByAdminId String
+  createdAt        DateTime @default(now())
+
+  targetUser User      @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+  createdBy  AdminUser @relation("AdminCoinGiftCreator", fields: [createdByAdminId], references: [id], onDelete: Cascade)
+
+  @@index([targetUserId])
+  @@index([createdAt])
+}
+
+/// Reusable volume options (hajm). Prices are set per product, not here.
+model ProductSizePreset {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  label     String
+  grams     Int
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  /// Catalog listing: 10 g line if present, else smallest price among sizes.
+  priceUzs    Int
+  /// [{ "presetId": "<cuid>", "priceUzs": <integer> }, ...]
+  sizes       Json?
+  images      String[] @default([])
+  /// Legacy per-bottle count for non-decanted SKUs. Prefer stockGrams for parfums.
+  stock       Int?
+  /// Total volume in storage measured in grams (1 g ≈ 1 ml for parfumery).
+  stockGrams       Int?
+  /// Low-stock warning threshold in grams.
+  lowStockGramsThreshold Int?
+  /// Denormalized from APPROVED ProductFeedback rows (recomputed on moderation).
+  ratingAvg   Float?
+  ratingCount Int      @default(0)
+  categoryId  String?
+  brandId     String?
+  familyId    String?
+  gender      ProductGender @default(UNISEX)
+  notesTop    String[] @default([])
+  notesHeart  String[] @default([])
+  notesBase   String[] @default([])
+  isBestseller Boolean @default(false)
+  isNewArrival Boolean @default(false)
+  releaseYear Int?
+  oldPriceUzs Int?
+  discountPercent Int?
+  lowStockThreshold Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+  feedbacks  ProductFeedback[]
+  cartItems  CartItem[]
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brand      Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  family     FragranceFamily? @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  bundleProducts BundleProduct[]
+  wishlistItems Wishlist[]
+  promoCodes PromoCode[]
+  stockMovements StockMovement[]
+  coPurchaseFrom ProductCoPurchase[] @relation("CoPurchaseFrom")
+  coPurchaseTo ProductCoPurchase[] @relation("CoPurchaseTo")
+}
+
+enum ProductGender {
+  MEN
+  WOMEN
+  UNISEX
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  parentId  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+  promoCodes PromoCode[]
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+}
+
+model FragranceFamily {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+}
+
+/// One row per user per product; admin approves for public display.
+model ProductFeedback {
+  id        String                 @id @default(cuid())
+  productId String
+  userId    String
+  stars     Int
+  comment   String                 @default("")
+  status    ProductFeedbackStatus  @default(PENDING)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId, status])
+  @@index([status, createdAt])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  userId            String
+  status            OrderStatus @default(PENDING)
+  subtotalUzs       Int
+  totalUzs          Int
+  /// Coins applied at checkout (1 coin = 1 UZS); cashPaidUzs = subtotalUzs - coinsAppliedUzs.
+  coinsAppliedUzs   Int         @default(0)
+  cashPaidUzs       Int
+  deliveryPhone     String?
+  deliveryFirstName String?
+  deliveryLastName  String?
+  /// Shipping location from Telegram Mini App map / location picker (WGS84).
+  deliveryLatitude  Float?
+  deliveryLongitude Float?
+  shipmentStatus    String?
+  promoCodeId       String?
+  discountUzs       Int         @default(0)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+  promoCode PromoCode? @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  stockMovements StockMovement[]
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  sizeSlug  String?
+  qty       Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId, sizeSlug])
+  @@index([cartId])
+  @@index([productId])
+}
+
+enum PromoCodeKind {
+  PERCENT
+  FIXED
+  FREE_SHIPPING
+  FIRST_ORDER
+}
+
+enum PromoAppliesTo {
+  ALL
+  CATEGORY
+  PRODUCT
+}
+
+model PromoCode {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  kind          PromoCodeKind
+  value         Int
+  startsAt      DateTime?
+  endsAt        DateTime?
+  usageLimit    Int?
+  perUserLimit  Int?
+  minOrderUzs   Int?
+  appliesTo     PromoAppliesTo @default(ALL)
+  categoryId    String?
+  productId     String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  product  Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  redemptions PromoRedemption[]
+  orders    Order[]
+  broadcasts Broadcast[]
+}
+
+model PromoRedemption {
+  id           String   @id @default(cuid())
+  promoCodeId  String
+  userId       String
+  orderId      String
+  discountUzs  Int
+  redeemedAt   DateTime @default(now())
+
+  promoCode PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([promoCodeId, redeemedAt])
+  @@index([userId, redeemedAt])
+}
+
+model Bundle {
+  id            String   @id @default(cuid())
+  title         String
+  discountKind  PromoCodeKind
+  discountValue Int
+  imageUrl      String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  products      BundleProduct[]
+}
+
+model BundleProduct {
+  id        String  @id @default(cuid())
+  bundleId  String
+  productId String
+  sortOrder Int     @default(0)
+  bundle    Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleId, productId])
+}
+
+model Wishlist {
+  id                 String   @id @default(cuid())
+  userId             String
+  productId          String
+  notifyBackInStock  Boolean  @default(true)
+  notifyPriceDrop    Boolean  @default(true)
+  lastNotifiedPriceUzs Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model ProductCoPurchase {
+  id             String   @id @default(cuid())
+  productFromId  String
+  productToId    String
+  score          Int
+  updatedAt      DateTime @updatedAt
+
+  productFrom Product @relation("CoPurchaseFrom", fields: [productFromId], references: [id], onDelete: Cascade)
+  productTo   Product @relation("CoPurchaseTo", fields: [productToId], references: [id], onDelete: Cascade)
+
+  @@unique([productFromId, productToId])
+  @@index([productFromId, score])
+}
+
+model UserSegment {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  definition      Json
+  userCountCached Int      @default(0)
+  recomputedAt    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  members         UserSegmentMembership[]
+  broadcasts      Broadcast[]
+}
+
+model UserSegmentMembership {
+  id        String   @id @default(cuid())
+  segmentId String
+  userId    String
+  createdAt DateTime @default(now())
+  segment   UserSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, userId])
+  @@index([userId])
+}
+
+enum BroadcastStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+model Broadcast {
+  id             String          @id @default(cuid())
+  title          String
+  bodyUz         String
+  bodyRu         String
+  imageUrl       String?
+  segmentId      String
+  coinGiftAmount Int?
+  promoCodeId    String?
+  scheduledFor   DateTime?
+  status         BroadcastStatus @default(DRAFT)
+  sentCount      Int             @default(0)
+  errorCount     Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  segment  UserSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  promoCode PromoCode? @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  logs     BroadcastLog[]
+}
+
+model BroadcastLog {
+  id          String   @id @default(cuid())
+  broadcastId String
+  userId      String
+  status      String
+  error       String?
+  createdAt   DateTime @default(now())
+
+  broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([broadcastId, createdAt])
+}
+
+model StockMovement {
+  id         String   @id @default(cuid())
+  orderId    String?
+  productId  String
+  /// Bottle / piece delta (legacy `stock` field).
+  delta      Int
+  /// Volume delta in grams (positive on restock, negative on sale).
+  deltaGrams Int      @default(0)
+  reason     String
+  createdAt  DateTime @default(now())
+
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, createdAt])
+}
+
+model OrderItem {
+  id                String @id @default(cuid())
+  orderId           String
+  productId         String?
+  quantity          Int
+  unitPriceUzs      Int
+  titleSnapshot     String
+  sizeId            String?
+  sizeLabelSnapshot String?
+  gramsSnapshot     Int?
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model Banner {
+  id        String    @id @default(cuid())
+  imageUrl  String
+  title     String?
+  linkUrl   String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+enum UserNotificationKind {
+  BROADCAST
+  ORDER_STATUS
+  COIN_GIFT
+  PROMO
+  SYSTEM
+}
+
+model UserNotification {
+  id        String               @id @default(cuid())
+  userId    String
+  kind      UserNotificationKind
+  title     String
+  body      String
+  imageUrl  String?
+  targetUrl String?
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}

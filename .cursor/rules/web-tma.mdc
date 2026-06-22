@@ -1,0 +1,36 @@
+---
+description: Telegram Mini App frontend conventions
+globs: apps/web/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Web — Telegram Mini App
+
+## Feature-Sliced layout
+
+```
+app/       — store, providers, RTK Query base API (parfumApi.ts)
+pages/     — route-level composition
+widgets/   — larger composites (app-bottom-nav, banner-carousel)
+features/  — reusable feature UI (cart, auth, wishlist)
+shared/    — API config, utilities, UI primitives
+```
+
+Imports flow one-way: `pages` → `widgets` → `features` → `shared`. Do not import upward.
+
+## State
+
+- Server state: RTK Query via `apps/web/src/app/parfumApi.ts`.
+- Auth bootstrap: read Telegram `initData` → `POST /auth/telegram` → store JWT → attach `Authorization: Bearer` header.
+- No standalone login screen; profile collected at checkout.
+
+## UI
+
+- Components: `@telegram-apps/telegram-ui`.
+- SDK: `@telegram-apps/sdk-react` for theme params, back button, viewport.
+- Mobile-first; respect safe-area insets.
+- Brand tokens as CSS variables synced with Telegram `themeParams`.
+
+## Security
+
+- Never put `TELEGRAM_BOT_TOKEN` in `apps/web` — `VITE_*` vars are public in the browser.

@@ -1,0 +1,28 @@
+# Optional: drag this file onto the Railway project canvas to stage api, web, and admin.
+# You must still add PostgreSQL (Database → PostgreSQL) and set DATABASE_URL on api.
+# Prefer config-as-code: set RAILWAY_CONFIG_FILE=railway/<service>.json on each service.
+#
+# Build context is the repository root (parent of this file).
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api/Dockerfile
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000}
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: ..
+      dockerfile: docker/admin/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000}
+    restart: unless-stopped

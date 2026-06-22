@@ -1,0 +1,29 @@
+/**
+ * Parfumbox brand tokens (Dark Green / Sand / Cream / Soft Gold).
+ * Surfaces fall back to Telegram theme CSS vars when running inside TMA.
+ */
+:root {
+  --pb-green-950: #0f2419;
+  --pb-green-900: #1a3d2e;
+  --pb-green-800: #234d3b;
+  --pb-sand-200: #e8dcc8;
+  --pb-sand-100: #efe6d8;
+  --pb-cream-50: #f7f3eb;
+  --pb-gold-500: #c9a962;
+  --pb-gold-600: #b08d3e;
+
+  --pb-text: var(--tg-theme-text-color, var(--pb-green-950));
+  --pb-text-muted: var(--tg-theme-hint-color, #5c6b63);
+  --pb-surface: var(--tg-theme-bg-color, var(--pb-cream-50));
+  --pb-surface-2: var(--tg-theme-secondary-bg-color, var(--pb-sand-100));
+  --pb-accent: var(--tg-theme-button-color, var(--pb-green-900));
+  --pb-accent-text: var(--tg-theme-button-text-color, #faf8f3);
+  --pb-link: var(--tg-theme-link-color, var(--pb-gold-600));
+  --pb-border: var(--tg-theme-section-separator-color, rgba(26, 61, 46, 0.12));
+
+  --pb-radius-sm: 8px;
+  --pb-radius-md: 12px;
+  --pb-shadow-card: 0 8px 24px rgba(15, 36, 25, 0.08);
+
+  --pb-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}

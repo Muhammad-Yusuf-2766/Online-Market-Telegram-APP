@@ -1,0 +1,26 @@
+---
+description: Prisma schema and migration conventions
+globs: apps/api/prisma/**
+alwaysApply: false
+---
+
+# API — Prisma
+
+## Schema changes
+
+1. Edit `apps/api/prisma/schema.prisma`.
+2. Create migration: `pnpm --filter api db:migrate:dev --name <change>`
+3. Regenerate client: `pnpm --filter api db:generate`
+
+Do **not** hand-edit existing migration SQL files.
+
+## Seed
+
+- Seed script: `apps/api/prisma/seed.ts`
+- Run: `pnpm --filter api db:seed`
+
+## Conventions
+
+- Use enums for status fields (order status, etc.).
+- Add indexes for foreign keys and frequently filtered columns.
+- Snapshot product fields on `OrderItem` for historical accuracy.

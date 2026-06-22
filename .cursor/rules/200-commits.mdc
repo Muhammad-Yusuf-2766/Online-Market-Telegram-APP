@@ -1,0 +1,53 @@
+---
+description: Conventional Commits for release-please versioning
+globs:
+  - "**/*"
+---
+
+# Conventional Commits
+
+Parfumbox uses **release-please** with unified semver. Every commit message must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint + husky).
+
+## Format
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+## Types (use these)
+
+| Type | When to use |
+|------|-------------|
+| `feat` | New user-facing behavior |
+| `fix` | Bug fix |
+| `perf` | Performance improvement |
+| `refactor` | Code change without behavior change |
+| `docs` | Documentation only |
+| `test` | Tests only |
+| `chore` | Tooling, deps, config |
+| `ci` | CI/CD changes |
+
+## Breaking changes
+
+Use `feat!:` / `fix!:` or a `BREAKING CHANGE:` footer for major version bumps.
+
+## Examples
+
+```
+feat: add admin order export CSV
+fix: validate Telegram initData expiry
+chore: add release-please workflow
+docs: document GET /version endpoint
+```
+
+## Do not
+
+- Use vague messages (`update`, `fix bugs`, `wip`).
+- Bump `version` in package.json manually — release-please handles releases.
+- Edit `CHANGELOG.md` by hand.
+
+See [docs/RELEASING.md](../../docs/RELEASING.md) for the full release flow.

@@ -1,0 +1,28 @@
+---
+description: Documentation writing conventions
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Docs
+
+## Style
+
+- Use tables for module/variable listings.
+- Use mermaid diagrams for architecture flows.
+- No emojis in docs.
+- Keep tone factual and concise.
+
+## Structure
+
+Existing docs:
+
+- `BACKEND_ARCHITECTURE.md` — API modules, auth, Prisma model outline
+- `FRONTEND_ARCHITECTURE.md` — Web + admin stack and conventions
+- `DEVOPS.md` — Env vars, Docker, HTTPS, BotFather
+- `PRODUCT_ARCHITECTURE.md` — Personas, user journeys
+
+## When adding docs
+
+- Do not create new top-level docs without updating the table in `README.md`.
+- Cross-link related docs instead of duplicating content.

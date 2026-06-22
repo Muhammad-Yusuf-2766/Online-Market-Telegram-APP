@@ -1,0 +1,35 @@
+---
+description: API unit and e2e test conventions
+globs: apps/api/**/*.spec.ts, apps/api/test/**/*.ts
+alwaysApply: false
+---
+
+# API — Tests
+
+## Unit specs (`*.service.spec.ts`)
+
+- Mock `PrismaService` with `jest-mock-extended` (`mockDeep`).
+- Reset mocks in `beforeEach`.
+- Never hit the real database from unit specs.
+- Config: `apps/api/jest.config.js`
+
+## E2E specs (`test/e2e/*.e2e-spec.ts`)
+
+- Use shared setup in `apps/api/test/setup/`:
+  - `app-factory.ts` — NestJS test app
+  - `db.ts` — test database helpers
+  - `e2e-env.ts` — env overrides
+  - `auth-helpers.ts` — JWT helpers
+- Config: `apps/api/test/jest-e2e.config.js`
+- Start test DB first: `pnpm docker:test-db`
+
+## Naming
+
+- Unit: `<feature>.service.spec.ts` next to the service.
+- E2E: `<feature>.e2e-spec.ts` under `apps/api/test/e2e/`.
+
+## Running
+
+- Unit: `pnpm test:api` or `pnpm --filter api test -- <pattern>`
+- E2E: `pnpm test:api:e2e`
+- Coverage: `pnpm test:api:cov`
