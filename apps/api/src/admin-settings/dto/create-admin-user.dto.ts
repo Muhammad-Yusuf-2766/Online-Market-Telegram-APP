@@ -18,11 +18,6 @@ export class CreateAdminUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
-  roleId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }

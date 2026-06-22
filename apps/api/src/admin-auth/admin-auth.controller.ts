@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { AdminUser } from "@prisma/client";
 import { CurrentAdmin } from "../common/decorators/current-admin.decorator";
-import type { AdminUserWithPermissions } from "../common/rbac/admin-user-with-permissions";
 import { AdminAuthService } from "./admin-auth.service";
 import { AdminAuthResponseDto } from "./dto/admin-auth-response.dto";
 import { AdminLoginDto } from "./dto/admin-login.dto";
@@ -22,8 +22,8 @@ export class AdminAuthController {
   @Get("me")
   @UseGuards(JwtAdminGuard)
   @ApiBearerAuth("admin-jwt")
-  @ApiOperation({ summary: "Current admin profile and permissions" })
-  me(@CurrentAdmin() admin: AdminUserWithPermissions) {
+  @ApiOperation({ summary: "Current Super Admin profile" })
+  me(@CurrentAdmin() admin: AdminUser) {
     return this.adminAuth.toMeResponse(admin);
   }
 }

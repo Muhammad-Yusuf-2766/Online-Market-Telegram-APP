@@ -8,17 +8,6 @@ import { logout } from '../features/auth/authSlice';
 import type { TelegramAuthUser } from '../features/auth/authSlice';
 import { normalizePaginated } from './paginationNormalize';
 
-/**
- * Resolve the Parfumbox API base URL.
- *
- * Priority:
- *  1. `VITE_API_BASE_URL` (set explicitly in `.env` or as a Docker build ARG on Railway).
- *  2. In dev: same-origin `/_parfumbox-api` (proxied by Vite to localhost:3000) so Telegram /
- *     ngrok tunnels reach the API through a single HTTPS origin.
- *  3. In prod with no env: same-origin (empty string) — relies on the web host proxying `/`
- *     paths to the API. We log a warning because cross-origin deployments (Railway) need
- *     `VITE_API_BASE_URL` baked into the build.
- */
 export function getParfumApiBaseUrl(): string {
   const fromEnv = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
   if (fromEnv) return fromEnv;
@@ -31,17 +20,13 @@ export function getParfumApiBaseUrl(): string {
   return '';
 }
 
-const baseUrl = getParfumApiBaseUrl();
-
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl,
+  baseUrl: getParfumApiBaseUrl(),
   prepareHeaders: (headers, { getState }) => {
     const token = (
       getState() as { auth: { accessToken: string | null } }
     ).auth.accessToken;
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
+    if (token) headers.set('Authorization', `Bearer ${token}`);
     return headers;
   },
 });
@@ -59,38 +44,46 @@ const baseQueryWithAuth: BaseQueryFn = async (args, api, extraOptions) => {
   return result;
 };
 
-export type ProductSizeOption = {
+export type MeasurementUnit = {
   id: string;
-  presetId: string;
-  label: string;
-  grams: number;
-  priceUzs: number;
+  slug: string;
+  name: string;
+  symbol: string;
+  sortOrder?: number;
+  allowDecimal: boolean;
+};
+
+export type Category = {
+  id: string;
+  slug: string;
+  name: string;
+  parentId?: string | null;
+  sortOrder?: number;
 };
 
 export type Product = {
   id: string;
   title: string;
   description: string;
-  priceUzs: number;
-  oldPriceUzs?: number | null;
+  priceKrw: number;
+  oldPriceKrw?: number | null;
   discountPercent?: number | null;
-  categoryId?: string | null;
-  brandId?: string | null;
-  familyId?: string | null;
-  gender?: 'MEN' | 'WOMEN' | 'UNISEX';
-  sizes: ProductSizeOption[] | null;
+  isOnSale: boolean;
+  isBestSeller: boolean;
+  stockQuantity: number;
+  lowStockThreshold?: number | null;
   images: string[];
-  stock: number | null;
-  /** Total perfume volume in warehouse; sellable units per size = floor(stockGrams / size grams). */
-  stockGrams?: number | null;
-  maxUnitsBySizeId?: Record<string, number> | null;
   ratingAvg: number | null;
   ratingCount: number;
+  isActive: boolean;
+  categoryId: string;
+  measurementUnitId: string;
+  category?: Category;
+  measurementUnit?: MeasurementUnit;
   createdAt: string;
   updatedAt: string;
 };
 
-/** Matches `ProductListSort` on the API (`GET /products?sort=…`). */
 export const productListSortValues = [
   'newest',
   'price_asc',
@@ -124,6 +117,7 @@ export type ProductFeedbackSubmitEligibility = {
 export type OrderStatus =
   | 'PENDING'
   | 'CONFIRMED'
+  | 'PREPARING'
   | 'SHIPPED'
   | 'DELIVERED'
   | 'CANCELLED';
@@ -133,26 +127,32 @@ export type OrderItem = {
   orderId: string;
   productId: string | null;
   quantity: number;
-  unitPriceUzs: number;
+  unitPriceKrw: number;
   titleSnapshot: string;
-  sizeId: string | null;
-  sizeLabelSnapshot: string | null;
-  gramsSnapshot: number | null;
+  imageSnapshot: string | null;
+  unitNameSnapshot: string | null;
+  unitSymbolSnapshot: string | null;
 };
 
 export type Order = {
   id: string;
   userId: string;
   status: OrderStatus;
-  subtotalUzs: number;
-  totalUzs: number;
-  coinsAppliedUzs: number;
-  cashPaidUzs: number;
+  subtotalKrw: number;
+  totalKrw: number;
+  discountKrw: number;
   deliveryPhone: string | null;
   deliveryFirstName: string | null;
   deliveryLastName: string | null;
-  deliveryLatitude: number | null;
-  deliveryLongitude: number | null;
+  addressId: string | null;
+  addressNameSnapshot: string;
+  roadAddressSnapshot: string | null;
+  jibunAddressSnapshot: string | null;
+  buildingNameSnapshot: string | null;
+  zoneNoSnapshot: string | null;
+  detailAddressSnapshot: string;
+  latitudeSnapshot: number | null;
+  longitudeSnapshot: number | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
@@ -174,40 +174,40 @@ export type UserProfile = {
   phone: string | null;
   birthDate: string | null;
   gender: UserGender;
-  referralCode: string;
-  coinBalance: number;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
-export type RewardSettingsPublic = {
-  referralCoins: number;
-  profileBirthdayCoins: number;
-  profileGenderCoins: number;
-  profileLastNameCoins: number;
-  profileFullCoins: number;
-};
-
-export type ReferralTreeNode = {
+export type UserAddress = {
   id: string;
-  firstName: string | null;
-  lastName: string | null;
-  referralCode: string;
+  userId: string;
+  label: string | null;
+  recipientName: string | null;
+  phone: string | null;
+  addressName: string;
+  roadAddressName: string | null;
+  jibunAddressName: string | null;
+  buildingName: string | null;
+  zoneNo: string | null;
+  detailAddress: string;
+  latitude: number | null;
+  longitude: number | null;
+  isDefault: boolean;
   createdAt: string;
-  children: ReferralTreeNode[];
+  updatedAt: string;
 };
 
-export type CoinInboxEntry = {
-  id: string;
-  kind: string;
-  delta: number;
-  metadata: unknown;
-  createdAt: string;
+export type AddressSearchResult = {
+  addressName: string;
+  roadAddressName: string | null;
+  jibunAddressName: string | null;
+  buildingName: string | null;
+  zoneNo: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
-export type Category = { id: string; slug: string; name: string };
-export type Brand = { id: string; slug: string; name: string };
-export type FragranceFamily = { id: string; slug: string; name: string };
 export type Banner = {
   id: string;
   imageUrl: string;
@@ -215,6 +215,7 @@ export type Banner = {
   linkUrl: string | null;
   sortOrder: number;
 };
+
 export type UserNotification = {
   id: string;
   kind: string;
@@ -225,6 +226,7 @@ export type UserNotification = {
   readAt: string | null;
   createdAt: string;
 };
+
 export type WishlistItem = {
   id: string;
   productId: string;
@@ -236,15 +238,13 @@ export type WishlistItem = {
 export type CartItemDto = {
   id: string;
   productId: string;
-  sizeSlug: string | null;
   qty: number;
   updatedAt: string;
-  product: {
-    id: string;
-    title: string;
-    priceUzs: number;
-    stock: number | null;
-    images: string[];
+  product: Pick<
+    Product,
+    'id' | 'title' | 'priceKrw' | 'stockQuantity' | 'images'
+  > & {
+    measurementUnit?: Pick<MeasurementUnit, 'id' | 'name' | 'symbol'>;
   };
 };
 
@@ -276,24 +276,20 @@ export const parfumApi = createApi({
     'ProductFeedback',
     'Order',
     'UserProfile',
-    'CoinInbox',
-    'RewardSettings',
+    'UserAddress',
     'Wishlist',
     'Notification',
     'Banner',
+    'Cart',
+    'MeasurementUnit',
   ],
-  /** Apply tag invalidations as soon as mutations settle so balance/UI stay in sync. */
   invalidationBehavior: 'immediately',
   endpoints: (build) => ({
     exchangeTelegram: build.mutation<
       TelegramAuthResponse,
       { initDataRaw: string }
     >({
-      query: (body) => ({
-        url: '/auth/telegram',
-        method: 'POST',
-        body,
-      }),
+      query: (body) => ({ url: '/auth/telegram', method: 'POST', body }),
     }),
     getProducts: build.query<
       PaginatedResult<Product>,
@@ -303,15 +299,12 @@ export const parfumApi = createApi({
         q?: string;
         sort?: ProductListSort;
         categorySlug?: string;
-        brandSlug?: string;
-        gender?: 'MEN' | 'WOMEN' | 'UNISEX';
-        familySlug?: string;
+        categoryIds?: string;
         priceMin?: number;
         priceMax?: number;
         inStockOnly?: boolean;
         bestseller?: boolean;
-        newArrival?: boolean;
-        discounted?: boolean;
+        onSale?: boolean;
       }
     >({
       query: ({
@@ -320,15 +313,12 @@ export const parfumApi = createApi({
         q,
         sort,
         categorySlug,
-        brandSlug,
-        gender,
-        familySlug,
+        categoryIds,
         priceMin,
         priceMax,
         inStockOnly,
         bestseller,
-        newArrival,
-        discounted,
+        onSale,
       }) => ({
         url: '/products',
         params: {
@@ -337,15 +327,12 @@ export const parfumApi = createApi({
           ...(q?.trim() ? { q: q.trim() } : {}),
           ...(sort && sort !== 'newest' ? { sort } : {}),
           ...(categorySlug ? { categorySlug } : {}),
-          ...(brandSlug ? { brandSlug } : {}),
-          ...(gender ? { gender } : {}),
-          ...(familySlug ? { familySlug } : {}),
+          ...(categoryIds ? { categoryIds } : {}),
           ...(priceMin != null ? { priceMin } : {}),
           ...(priceMax != null ? { priceMax } : {}),
           ...(inStockOnly ? { inStockOnly: true } : {}),
           ...(bestseller ? { bestseller: true } : {}),
-          ...(newArrival ? { newArrival: true } : {}),
-          ...(discounted ? { discounted: true } : {}),
+          ...(onSale ? { onSale: true } : {}),
         },
       }),
       transformResponse: (response: unknown, _m, arg) =>
@@ -361,23 +348,38 @@ export const parfumApi = createApi({
             ]
           : [{ type: 'Product', id: 'LIST' }],
     }),
+    getSaleProducts: build.query<
+      PaginatedResult<Product>,
+      { page: number; pageSize: number }
+    >({
+      query: ({ page, pageSize }) => ({
+        url: '/products/sections/sale',
+        params: { page, pageSize },
+      }),
+      transformResponse: (response: unknown, _m, arg) =>
+        normalizePaginated<Product>(response, arg),
+      providesTags: [{ type: 'Product', id: 'SALE' }],
+    }),
+    getBestsellerProducts: build.query<
+      PaginatedResult<Product>,
+      { page: number; pageSize: number }
+    >({
+      query: ({ page, pageSize }) => ({
+        url: '/products/sections/bestseller',
+        params: { page, pageSize },
+      }),
+      transformResponse: (response: unknown, _m, arg) =>
+        normalizePaginated<Product>(response, arg),
+      providesTags: [{ type: 'Product', id: 'BESTSELLER' }],
+    }),
     getProduct: build.query<Product, string>({
       query: (id) => `/products/${id}`,
       providesTags: (_r, _e, id) => [{ type: 'Product', id }],
     }),
-    getHighlights: build.query<{ bestseller: Product[]; newArrivals: Product[]; discounted: Product[] }, void>({
-      query: () => '/products/highlights',
-    }),
-    getSimilarProducts: build.query<Product[], string>({
-      query: (id) => `/products/${id}/similar`,
-    }),
-    getFrequentlyBoughtTogether: build.query<Product[], string>({
-      query: (id) => `/products/${id}/frequently-bought-together`,
-    }),
     getCategories: build.query<Category[], void>({ query: () => '/categories' }),
-    getBrands: build.query<Brand[], void>({ query: () => '/brands' }),
-    getFragranceFamilies: build.query<FragranceFamily[], void>({
-      query: () => '/fragrance-families',
+    getMeasurementUnits: build.query<MeasurementUnit[], void>({
+      query: () => '/measurement-units',
+      providesTags: [{ type: 'MeasurementUnit', id: 'LIST' }],
     }),
     getBanners: build.query<Banner[], void>({
       query: () => '/banners',
@@ -407,10 +409,7 @@ export const parfumApi = createApi({
         params: { page, pageSize },
       }),
       transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<ProductFeedbackPublic>(response, {
-          page: arg.page,
-          pageSize: arg.pageSize,
-        }),
+        normalizePaginated<ProductFeedbackPublic>(response, arg),
       providesTags: (_r, _e, arg) => [
         { type: 'ProductFeedback', id: arg.productId },
       ],
@@ -422,11 +421,7 @@ export const parfumApi = createApi({
       query: ({ productId, orderId, stars, comment }) => ({
         url: `/products/${productId}/feedback`,
         method: 'POST',
-        body: {
-          orderId,
-          stars,
-          comment: comment?.trim() || undefined,
-        },
+        body: { orderId, stars, comment: comment?.trim() || undefined },
       }),
       invalidatesTags: (_r, _e, arg) => [
         { type: 'Product', id: arg.productId },
@@ -454,38 +449,37 @@ export const parfumApi = createApi({
         gender: UserGender;
       }>
     >({
-      query: (body) => ({
-        url: '/users/me',
+      query: (body) => ({ url: '/users/me', method: 'PATCH', body }),
+      invalidatesTags: [{ type: 'UserProfile', id: 'ME' }],
+    }),
+    getUserAddresses: build.query<UserAddress[], void>({
+      query: () => '/users/me/addresses',
+      providesTags: [{ type: 'UserAddress', id: 'LIST' }],
+    }),
+    createUserAddress: build.mutation<
+      UserAddress,
+      Omit<UserAddress, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+    >({
+      query: (body) => ({ url: '/users/me/addresses', method: 'POST', body }),
+      invalidatesTags: [{ type: 'UserAddress', id: 'LIST' }],
+    }),
+    updateUserAddress: build.mutation<
+      UserAddress,
+      { id: string; patch: Partial<Omit<UserAddress, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> }
+    >({
+      query: ({ id, patch }) => ({
+        url: `/users/me/addresses/${id}`,
         method: 'PATCH',
-        body,
+        body: patch,
       }),
-      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(
-            parfumApi.util.updateQueryData('getMe', undefined, () => data),
-          );
-        } catch {
-          /* mutation failed — keep prior cache */
-        }
-      },
+      invalidatesTags: [{ type: 'UserAddress', id: 'LIST' }],
     }),
-    getRewardSettings: build.query<RewardSettingsPublic, void>({
-      query: () => '/settings/rewards',
-      providesTags: [{ type: 'RewardSettings', id: 'PUBLIC' }],
+    deleteUserAddress: build.mutation<{ ok: true }, string>({
+      query: (id) => ({ url: `/users/me/addresses/${id}`, method: 'DELETE' }),
+      invalidatesTags: [{ type: 'UserAddress', id: 'LIST' }],
     }),
-    getReferralTree: build.query<ReferralTreeNode, { maxDepth?: number }>({
-      query: ({ maxDepth = 5 }) => ({
-        url: '/users/me/referral-tree',
-        params: { maxDepth },
-      }),
-    }),
-    getCoinInbox: build.query<CoinInboxEntry[], void>({
-      query: () => '/users/me/coin-inbox',
-      providesTags: [{ type: 'CoinInbox', id: 'LIST' }],
-    }),
-    getRecentlyViewed: build.query<Product[], void>({
-      query: () => '/users/me/recently-viewed',
+    searchAddresses: build.query<AddressSearchResult[], string>({
+      query: (q) => ({ url: '/addresses/search', params: { q } }),
     }),
     getWishlist: build.query<WishlistItem[], void>({
       query: () => '/wishlist',
@@ -515,10 +509,7 @@ export const parfumApi = createApi({
           unreadCount?: number;
         };
         return {
-          ...normalizePaginated<UserNotification>(r, {
-            page: arg.page,
-            pageSize: arg.pageSize,
-          }),
+          ...normalizePaginated<UserNotification>(r, arg),
           unreadCount: r.unreadCount ?? 0,
         };
       },
@@ -532,25 +523,16 @@ export const parfumApi = createApi({
       invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
     }),
     markAllNotificationsRead: build.mutation<{ ok: true }, void>({
-      query: () => ({
-        url: '/users/me/notifications/read-all',
-        method: 'POST',
-      }),
+      query: () => ({ url: '/users/me/notifications/read-all', method: 'POST' }),
       invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
-    }),
-    validatePromoCode: build.mutation<
-      { promoCodeId: string; discountUzs: number },
-      { code: string; subtotalUzs: number }
-    >({
-      query: (body) => ({ url: '/promo-codes/validate', method: 'POST', body }),
     }),
     getCart: build.query<CartDto, void>({
       query: () => '/cart',
-      providesTags: [{ type: 'Order', id: 'CART' }],
+      providesTags: [{ type: 'Cart', id: 'CURRENT' }],
     }),
-    upsertCartItem: build.mutation<CartDto, { productId: string; sizeSlug?: string; qty: number }>({
+    upsertCartItem: build.mutation<CartDto, { productId: string; qty: number }>({
       query: (body) => ({ url: '/cart/items', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Order', id: 'CART' }],
+      invalidatesTags: [{ type: 'Cart', id: 'CURRENT' }],
     }),
     updateCartItemQty: build.mutation<CartDto, { itemId: string; qty: number }>({
       query: ({ itemId, qty }) => ({
@@ -558,25 +540,15 @@ export const parfumApi = createApi({
         method: 'PATCH',
         body: { qty },
       }),
-      invalidatesTags: [{ type: 'Order', id: 'CART' }],
+      invalidatesTags: [{ type: 'Cart', id: 'CURRENT' }],
     }),
     removeCartItem: build.mutation<CartDto, string>({
       query: (itemId) => ({ url: `/cart/items/${itemId}`, method: 'DELETE' }),
-      invalidatesTags: [{ type: 'Order', id: 'CART' }],
+      invalidatesTags: [{ type: 'Cart', id: 'CURRENT' }],
     }),
     clearCartRemote: build.mutation<{ ok: true }, void>({
       query: () => ({ url: '/cart/clear', method: 'POST' }),
-      invalidatesTags: [{ type: 'Order', id: 'CART' }],
-    }),
-    postCoinInboxAck: build.mutation<{ ok: true }, void>({
-      query: () => ({
-        url: '/users/me/coin-inbox/ack',
-        method: 'POST',
-      }),
-      invalidatesTags: [
-        { type: 'CoinInbox', id: 'LIST' },
-        { type: 'UserProfile', id: 'ME' },
-      ],
+      invalidatesTags: [{ type: 'Cart', id: 'CURRENT' }],
     }),
     listOrders: build.query<
       PaginatedResult<Order>,
@@ -587,10 +559,7 @@ export const parfumApi = createApi({
         params: { page, pageSize },
       }),
       transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<Order>(response, {
-          page: arg.page,
-          pageSize: arg.pageSize,
-        }),
+        normalizePaginated<Order>(response, arg),
       providesTags: (result) =>
         result?.items?.length
           ? [
@@ -608,64 +577,36 @@ export const parfumApi = createApi({
       invalidatesTags: (_r, _e, id) => [
         { type: 'Order', id },
         { type: 'Order', id: 'LIST' },
-        { type: 'UserProfile', id: 'ME' },
         { type: 'Product', id: 'LIST' },
+        { type: 'Cart', id: 'CURRENT' },
       ],
     }),
     createOrder: build.mutation<
       Order,
       {
-        items: Array<{
-          productId: string;
-          quantity: number;
-          sizeId?: string;
-        }>;
+        items?: Array<{ productId: string; quantity: number }>;
+        addressId?: string;
         deliveryPhone?: string;
         deliveryFirstName?: string;
         deliveryLastName?: string;
-        birthDate?: string;
-        deliveryLatitude?: number;
-        deliveryLongitude?: number;
-        coinsToSpendUzs?: number;
-        promoCode?: string;
+        addressName?: string;
+        roadAddressName?: string | null;
+        jibunAddressName?: string | null;
+        buildingName?: string | null;
+        zoneNo?: string | null;
+        detailAddress?: string;
+        latitude?: number | null;
+        longitude?: number | null;
       }
     >({
       query: (body) => ({ url: '/orders', method: 'POST', body }),
-      invalidatesTags: (result, _err, arg) => {
-        const tags: Array<
-          | { type: 'Order'; id: string }
-          | { type: 'UserProfile'; id: string }
-          | { type: 'Product'; id: string }
-          | { type: 'ProductFeedback'; id: string }
-        > = [
-          { type: 'Order', id: 'LIST' },
-          { type: 'UserProfile', id: 'ME' },
-          { type: 'Product', id: 'LIST' },
-        ];
-        if (result?.id) {
-          for (const i of arg.items) {
-            tags.push({
-              type: 'ProductFeedback',
-              id: `eligibility-${result.id}-${i.productId}`,
-            });
-          }
-        }
-        return tags;
-      },
-      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
-        const spend = arg.coinsToSpendUzs ?? 0;
-        if (spend <= 0) return;
-        const patch = dispatch(
-          parfumApi.util.updateQueryData('getMe', undefined, (draft) => {
-            draft.coinBalance = Math.max(0, draft.coinBalance - spend);
-          }),
-        );
-        try {
-          await queryFulfilled;
-        } catch {
-          patch.undo();
-        }
-      },
+      invalidatesTags: (result) => [
+        { type: 'Order', id: 'LIST' },
+        { type: 'UserProfile', id: 'ME' },
+        { type: 'Product', id: 'LIST' },
+        { type: 'Cart', id: 'CURRENT' },
+        ...(result?.id ? [{ type: 'Order' as const, id: result.id }] : []),
+      ],
     }),
   }),
 });
@@ -673,36 +614,34 @@ export const parfumApi = createApi({
 export const {
   useExchangeTelegramMutation,
   useGetProductsQuery,
+  useGetSaleProductsQuery,
+  useGetBestsellerProductsQuery,
   useGetProductQuery,
-  useGetHighlightsQuery,
-  useGetSimilarProductsQuery,
-  useGetFrequentlyBoughtTogetherQuery,
   useGetCategoriesQuery,
-  useGetBrandsQuery,
-  useGetFragranceFamiliesQuery,
+  useGetMeasurementUnitsQuery,
   useGetBannersQuery,
   useGetProductFeedbackSubmitEligibilityQuery,
   useGetProductFeedbackQuery,
   useSubmitProductFeedbackMutation,
   useGetMeQuery,
   usePatchMeMutation,
-  useGetRewardSettingsQuery,
-  useGetReferralTreeQuery,
-  useGetCoinInboxQuery,
-  useGetRecentlyViewedQuery,
+  useGetUserAddressesQuery,
+  useCreateUserAddressMutation,
+  useUpdateUserAddressMutation,
+  useDeleteUserAddressMutation,
+  useLazySearchAddressesQuery,
+  useSearchAddressesQuery,
   useGetWishlistQuery,
   useToggleWishlistMutation,
   useUpdateWishlistPrefsMutation,
   useGetMyNotificationsQuery,
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
-  useValidatePromoCodeMutation,
   useGetCartQuery,
   useUpsertCartItemMutation,
   useUpdateCartItemQtyMutation,
   useRemoveCartItemMutation,
   useClearCartRemoteMutation,
-  usePostCoinInboxAckMutation,
   useListOrdersQuery,
   useGetOrderQuery,
   useCancelOrderMutation,

@@ -1,14 +1,8 @@
-import { Button, Input, Placeholder } from '@telegram-apps/telegram-ui';
-import { useState } from 'react';
+import { Button, Placeholder } from '@telegram-apps/telegram-ui';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
-import { useValidatePromoCodeMutation } from '../../../app/parfumApi';
-import {
-  removeLine,
-  setAppliedPromo,
-  setLineQuantity,
-} from '../../../features/cart/cartSlice';
+import { removeLine, setLineQuantity } from '../../../features/cart/cartSlice';
 import { formatPrice } from '../../../shared/lib/money';
 
 export function CartPage() {
@@ -16,16 +10,10 @@ export function CartPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const items = useAppSelector((s) => s.cart.items);
-  const appliedPromo = useAppSelector((s) => s.cart.appliedPromo);
-  const [promoInput, setPromoInput] = useState(appliedPromo?.code ?? '');
-  const [validatePromo, { isLoading: validatingPromo }] = useValidatePromoCodeMutation();
-
   const subtotal = items.reduce(
-    (sum, line) => sum + line.unitPriceUzs * line.quantity,
+    (sum, line) => sum + line.unitPriceKrw * line.quantity,
     0,
   );
-  const promoDiscount = appliedPromo?.discountUzs ?? 0;
-  const totalAfterPromo = Math.max(0, subtotal - promoDiscount);
 
   if (items.length === 0) {
     return (
@@ -55,10 +43,10 @@ export function CartPage() {
             <div className="cart-line__body">
               <span className="cart-line__title">
                 {line.title}
-                {line.sizeLabel ? ` · ${line.sizeLabel}` : ''}
+                {line.unitLabel ? ` / ${line.unitLabel}` : ''}
               </span>
               <span className="cart-line__price">
-                {formatPrice(line.unitPriceUzs * line.quantity)}
+                {formatPrice(line.unitPriceKrw * line.quantity)}
               </span>
               <div className="cart-line__qty">
                 <button
@@ -74,7 +62,7 @@ export function CartPage() {
                   }
                   aria-label={t('cart.ariaDecrease')}
                 >
-                  −
+                  -
                 </button>
                 <span className="cart-qty-value">{line.quantity}</span>
                 <button
@@ -104,50 +92,11 @@ export function CartPage() {
           </li>
         ))}
       </ul>
-      <div className="form-field" style={{ marginBottom: 12 }}>
-        <Input
-          id="cart-promo"
-          value={promoInput}
-          onChange={(e) => setPromoInput(e.target.value)}
-          placeholder={t('checkout.promoPlaceholder')}
-          header={t('checkout.promoCode')}
-        />
-        <Button
-          mode="bezeled"
-          size="s"
-          disabled={validatingPromo || !promoInput.trim()}
-          onClick={() => {
-            void validatePromo({ code: promoInput.trim(), subtotalUzs: subtotal })
-              .unwrap()
-              .then((res) =>
-                dispatch(
-                  setAppliedPromo({
-                    code: promoInput.trim(),
-                    discountUzs: res.discountUzs,
-                  }),
-                ),
-              )
-              .catch(() => dispatch(setAppliedPromo(null)));
-          }}
-        >
-          {t('checkout.applyPromo')}
-        </Button>
-        {appliedPromo ? (
-          <p className="page-placeholder" style={{ margin: '6px 0 0', fontSize: 13 }}>
-            {t('checkout.promoDiscount')}: {formatPrice(appliedPromo.discountUzs)}
-          </p>
-        ) : null}
-      </div>
       <div className="cart-subtotal">
         <span>{t('cart.subtotal')}</span>
-        <strong>{formatPrice(totalAfterPromo)}</strong>
+        <strong>{formatPrice(subtotal)}</strong>
       </div>
-      <Button
-        mode="filled"
-        size="l"
-        stretched
-        onClick={() => navigate('/checkout')}
-      >
+      <Button mode="filled" size="l" stretched onClick={() => navigate('/checkout')}>
         {t('cart.checkout')}
       </Button>
     </div>

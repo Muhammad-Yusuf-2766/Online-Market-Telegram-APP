@@ -50,7 +50,7 @@ export function WishlistPage() {
                 {item.product.title}
               </Link>
               <span className="cart-line__price">
-                {formatPrice(item.product.priceUzs)}
+                {formatPrice(item.product.priceKrw)}
               </span>
               <div className="wishlist-prefs">
                 <label>

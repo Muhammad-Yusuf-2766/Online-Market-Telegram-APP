@@ -6,7 +6,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useCancelOrderMutation, useGetOrderQuery } from '../../../app/parfumApi';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import { addOrMergeLine } from '../../../features/cart/cartSlice';
-import { DEFAULT_CART_SIZE_ID } from '../../../shared/lib/productSizes';
 import { OrderLineProductFeedback } from './OrderLineProductFeedback';
 import { intlLocaleForLanguage } from '../../../i18n';
 import { formatPrice } from '../../../shared/lib/money';
@@ -95,22 +94,15 @@ export function OrderDetailPage() {
         style={{
           fontSize: 20,
           fontWeight: 700,
-          marginBottom: (order.coinsAppliedUzs ?? 0) > 0 ? 4 : 16,
+          marginBottom: 16,
         }}
       >
-        {formatPrice(order.totalUzs)}
+        {formatPrice(order.totalKrw)}
       </p>
-      {(order.coinsAppliedUzs ?? 0) > 0 ? (
-        <p className="page-placeholder" style={{ marginBottom: 16 }}>
-          {t('orderDetail.paidCash')}: {formatPrice(order.cashPaidUzs ?? order.totalUzs)} ·{' '}
-          {t('orderDetail.paidCoins')}: {formatPrice(order.coinsAppliedUzs ?? 0)}
-        </p>
-      ) : null}
       {(order.deliveryPhone ||
         order.deliveryFirstName ||
         order.deliveryLastName ||
-        (order.deliveryLatitude != null &&
-          order.deliveryLongitude != null)) && (
+        order.addressNameSnapshot) && (
         <SectionBlock title={t('orderDetail.delivery')}>
           {order.deliveryFirstName || order.deliveryLastName ? (
             <p style={{ margin: '0 0 8px' }}>
@@ -122,11 +114,16 @@ export function OrderDetailPage() {
           {order.deliveryPhone ? (
             <p style={{ margin: '0 0 8px' }}>{order.deliveryPhone}</p>
           ) : null}
-          {order.deliveryLatitude != null &&
-          order.deliveryLongitude != null ? (
+          <p style={{ margin: '0 0 8px' }}>
+            {[order.roadAddressSnapshot || order.addressNameSnapshot, order.detailAddressSnapshot]
+              .filter(Boolean)
+              .join(', ')}
+          </p>
+          {order.latitudeSnapshot != null &&
+          order.longitudeSnapshot != null ? (
             <ShippingCoordsBlock
-              lat={order.deliveryLatitude}
-              lng={order.deliveryLongitude}
+              lat={order.latitudeSnapshot}
+              lng={order.longitudeSnapshot}
               coordsLabel={t('orderDetail.shippingCoords')}
               mapLabel={t('orderDetail.openShippingOnMap')}
             />
@@ -139,7 +136,8 @@ export function OrderDetailPage() {
             <li key={it.id} style={{ marginBottom: 12 }}>
               <div>
                 {it.titleSnapshot} × {it.quantity} —{' '}
-                {formatPrice(it.unitPriceUzs * it.quantity)}
+                {formatPrice(it.unitPriceKrw * it.quantity)}
+                {it.unitSymbolSnapshot ? ` / ${it.unitSymbolSnapshot}` : ''}
               </div>
               {it.productId && order.status !== 'CANCELLED' ? (
                 order.status === 'DELIVERED' ? (
@@ -187,11 +185,10 @@ export function OrderDetailPage() {
             dispatch(
               addOrMergeLine({
                 productId: it.productId,
-                sizeId: it.sizeId ?? DEFAULT_CART_SIZE_ID,
                 title: it.titleSnapshot,
-                sizeLabel: it.sizeLabelSnapshot,
-                unitPriceUzs: it.unitPriceUzs,
-                imageUrl: null,
+                unitLabel: it.unitSymbolSnapshot,
+                unitPriceKrw: it.unitPriceKrw,
+                imageUrl: it.imageSnapshot,
                 quantity: it.quantity,
               }),
             );

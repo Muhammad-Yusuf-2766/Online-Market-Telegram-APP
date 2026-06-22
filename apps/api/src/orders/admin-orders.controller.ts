@@ -2,9 +2,6 @@ import { Body, Controller, Get, NotFoundException, Param, Patch, Query, UseGuard
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Order } from "@prisma/client";
 import { JwtAdminGuard } from "../admin-auth/guards/jwt-admin.guard";
-import { PERMISSIONS } from "../common/rbac/permissions.constants";
-import { PermissionsGuard } from "../common/rbac/permissions.guard";
-import { RequirePermissions } from "../common/rbac/require-permissions.decorator";
 import type { PaginatedResult } from "../common/pagination";
 import { AdminOrdersQueryDto } from "./dto/admin-orders-query.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
@@ -12,13 +9,12 @@ import { type AdminOrderRow, OrdersService } from "./orders.service";
 
 @ApiTags("admin-orders")
 @ApiBearerAuth("admin-jwt")
-@UseGuards(JwtAdminGuard, PermissionsGuard)
+@UseGuards(JwtAdminGuard)
 @Controller("admin/orders")
 export class AdminOrdersController {
   constructor(private readonly orders: OrdersService) {}
 
   @Get()
-  @RequirePermissions(PERMISSIONS.orders.view)
   @ApiOperation({ summary: "List all orders (admin, paginated, filterable)" })
   @ApiOkResponse({ description: "Paginated orders with items and user profile data" })
   async list(@Query() query: AdminOrdersQueryDto): Promise<PaginatedResult<AdminOrderRow>> {
@@ -26,7 +22,6 @@ export class AdminOrdersController {
   }
 
   @Get(":id")
-  @RequirePermissions(PERMISSIONS.orders.view)
   @ApiOperation({ summary: "Get one order (admin)" })
   @ApiOkResponse({ description: "Order with items and user" })
   async getOne(@Param("id") id: string): Promise<AdminOrderRow> {
@@ -38,7 +33,6 @@ export class AdminOrdersController {
   }
 
   @Patch(":id/status")
-  @RequirePermissions(PERMISSIONS.orders.update)
   @ApiOperation({ summary: "Update order status" })
   @ApiOkResponse({ description: "Updated order" })
   async updateStatus(@Param("id") id: string, @Body() body: UpdateOrderStatusDto): Promise<Order> {

@@ -1,26 +1,21 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAdminGuard } from "../admin-auth/guards/jwt-admin.guard";
-import { PERMISSIONS } from "../common/rbac/permissions.constants";
-import { PermissionsGuard } from "../common/rbac/permissions.guard";
-import { RequirePermissions } from "../common/rbac/require-permissions.decorator";
 import { BannersService } from "./banners.service";
 
 @ApiTags("admin-banners")
 @ApiBearerAuth("admin-jwt")
-@UseGuards(JwtAdminGuard, PermissionsGuard)
+@UseGuards(JwtAdminGuard)
 @Controller("admin/banners")
 export class AdminBannersController {
   constructor(private readonly banners: BannersService) {}
 
   @Get()
-  @RequirePermissions(PERMISSIONS.banners.view)
   list() {
     return this.banners.listAll();
   }
 
   @Post()
-  @RequirePermissions(PERMISSIONS.banners.manage)
   create(
     @Body()
     body: {
@@ -37,7 +32,6 @@ export class AdminBannersController {
   }
 
   @Patch(":id")
-  @RequirePermissions(PERMISSIONS.banners.manage)
   update(
     @Param("id") id: string,
     @Body()
@@ -55,7 +49,6 @@ export class AdminBannersController {
   }
 
   @Delete(":id")
-  @RequirePermissions(PERMISSIONS.banners.manage)
   remove(@Param("id") id: string) {
     return this.banners.remove(id);
   }

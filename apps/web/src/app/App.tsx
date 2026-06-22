@@ -10,17 +10,15 @@ import { OrderDetailPage } from '../pages/order-detail-page/ui/OrderDetailPage';
 import { OrdersPage } from '../pages/orders-page/ui/OrdersPage';
 import { ProductPage } from '../pages/product-page/ui/ProductPage';
 import { ProfilePage } from '../pages/profile-page/ui/ProfilePage';
-import { CoinsPage } from '../pages/coins-page/ui/CoinsPage';
-import { CoinInboxBridge } from '../features/coins/CoinInboxBridge';
 import { SearchPage } from '../pages/search-page/ui/SearchPage';
 import { CartSyncBridge } from '../features/cart/CartSyncBridge';
 import { WishlistPage } from '../pages/wishlist-page/ui/WishlistPage';
+import { NotificationsPage } from '../pages/notifications-page/ui/NotificationsPage';
 
 export default function App() {
   return (
-    <div className="tma-shell">
+      <div className="tma-shell">
       <TelegramBackButtonBridge />
-      <CoinInboxBridge />
       <CartSyncBridge />
       <AppTopBar />
       <main className="tma-main">
@@ -34,7 +32,7 @@ export default function App() {
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/coins" element={<CoinsPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

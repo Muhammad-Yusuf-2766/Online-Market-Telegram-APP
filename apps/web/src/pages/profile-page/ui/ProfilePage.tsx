@@ -2,7 +2,6 @@ import { Button, Input, Select, Spinner } from '@telegram-apps/telegram-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  useGetRewardSettingsQuery,
   usePatchMeMutation,
   type UserGender,
   type UserProfile,
@@ -29,27 +28,6 @@ function ProfileEditor({ me }: { me: UserProfile }) {
   const authUser = useAppSelector((s) => s.auth.user);
 
   const [patchMe, { isLoading: saving }] = usePatchMeMutation();
-  const { data: rewards } = useGetRewardSettingsQuery();
-
-  const missingFields: Array<{ key: string; coins: number; filled: boolean }> = [
-    {
-      key: 'lastName',
-      coins: rewards?.profileLastNameCoins ?? 0,
-      filled: Boolean(me.lastName?.trim()),
-    },
-    {
-      key: 'birthDate',
-      coins: rewards?.profileBirthdayCoins ?? 0,
-      filled: Boolean(me.birthDate),
-    },
-    {
-      key: 'gender',
-      coins: rewards?.profileGenderCoins ?? 0,
-      filled: me.gender !== 'UNSPECIFIED',
-    },
-  ];
-  const earnable = missingFields.filter((f) => !f.filled && f.coins > 0);
-  const totalEarnable = earnable.reduce((s, f) => s + f.coins, 0);
 
   const [nationalDigits, setNationalDigits] = useState(() =>
     parseNationalDigits(me.phone ?? ''),
@@ -85,18 +63,6 @@ function ProfileEditor({ me }: { me: UserProfile }) {
         {me.telegramUsername ? `@${me.telegramUsername}` : t('profile.telegramLine')}{' '}
         · ID {me.telegramId}
       </p>
-      {earnable.length > 0 ? (
-        <section className="profile-nudge" aria-label={t('profile.completeForCoins')}>
-          <strong>{t('profile.completeForCoins', { n: totalEarnable })}</strong>
-          <ul>
-            {earnable.map((f) => (
-              <li key={f.key}>
-                {t(`profile.field.${f.key}`)} — +{f.coins} {t('coins.uzsLabel')}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
       <div className="form-stack">
         <Input
           id="pf-phone"

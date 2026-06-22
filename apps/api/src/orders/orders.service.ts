@@ -4,18 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import type { Order, OrderItem, OrderStatus, Prisma, Product } from "@prisma/client";
+import type { Order, OrderItem, OrderStatus, Prisma } from "@prisma/client";
 import type { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { paginationParams, toPaginatedResult, type PaginatedResult } from "../common/pagination";
-import {
-  orderItemTitleSnapshot,
-  resolveProductUnitPrice,
-} from "../products/product-sizes.util";
-import { CoinsService } from "../coins/coins.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { OrderEventsService } from "../realtime/order-events.service";
 import { TelegramNotifyService } from "../telegram/telegram-notify.service";
-import { PromotionsService } from "../promotions/promotions.service";
 import { UserNotificationsService } from "../notifications/user-notifications.service";
 import { AdminOrdersQueryDto } from "./dto/admin-orders-query.dto";
 import { CreateOrderDto } from "./dto/create-order.dto";
@@ -32,202 +26,128 @@ export type AdminOrderRow = Order & {
   };
 };
 
+type OrderLineInput = {
+  productId: string;
+  quantity: number;
+};
+
+type AddressSnapshot = {
+  addressId: string | null;
+  addressNameSnapshot: string;
+  roadAddressSnapshot: string | null;
+  jibunAddressSnapshot: string | null;
+  buildingNameSnapshot: string | null;
+  zoneNoSnapshot: string | null;
+  detailAddressSnapshot: string;
+  latitudeSnapshot: number | null;
+  longitudeSnapshot: number | null;
+};
+
 @Injectable()
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orderEvents: OrderEventsService,
     private readonly telegramNotify: TelegramNotifyService,
-    private readonly coinsService: CoinsService,
-    private readonly promotions: PromotionsService,
     private readonly userNotifications: UserNotificationsService,
   ) {}
 
   async createForUser(userId: string, dto: CreateOrderDto): Promise<Order & { items: OrderItem[] }> {
-    const hasLat = dto.deliveryLatitude != null;
-    const hasLng = dto.deliveryLongitude != null;
-    if (hasLat !== hasLng) {
-      throw new BadRequestException("deliveryLatitude and deliveryLongitude must be provided together");
-    }
-
-    const merged = new Map<string, { productId: string; sizeId: string | undefined; quantity: number }>();
-    for (const line of dto.items) {
-      const sizeKey = line.sizeId ?? "default";
-      const key = `${line.productId}::${sizeKey}`;
-      const prev = merged.get(key);
-      merged.set(key, {
-        productId: line.productId,
-        sizeId: line.sizeId,
-        quantity: (prev?.quantity ?? 0) + line.quantity,
-      });
-    }
-    const lines = [...merged.values()];
-    const productIds = [...new Set(lines.map((l) => l.productId))];
-
     const created = await this.prisma.$transaction(async (tx) => {
+      const lines = await this.resolveOrderLines(tx, userId, dto.items ?? []);
+      if (lines.length === 0) {
+        throw new BadRequestException("Cart is empty");
+      }
+      const productIds = [...new Set(lines.map((line) => line.productId))];
       const products = await tx.product.findMany({
-        where: { id: { in: productIds } },
+        where: { id: { in: productIds }, isActive: true },
+        include: { measurementUnit: true },
       });
       if (products.length !== productIds.length) {
         throw new NotFoundException("One or more products were not found");
       }
-
-      const presets = await tx.productSizePreset.findMany();
-      const presetById = new Map(presets.map((p) => [p.id, p]));
-
       const byId = new Map(products.map((p) => [p.id, p]));
 
-      let subtotalUzs = 0;
+      let subtotalKrw = 0;
       for (const line of lines) {
-        const p = byId.get(line.productId)!;
-        const resolved = resolveProductUnitPrice(p.priceUzs, p.sizes, presetById, line.sizeId);
-        subtotalUzs += resolved.unitPriceUzs * line.quantity;
+        const product = byId.get(line.productId)!;
+        subtotalKrw += product.priceKrw * line.quantity;
       }
 
-      const payer = await tx.user.findUniqueOrThrow({
-        where: { id: userId },
-        select: { coinBalance: true },
-      });
-      const requestedCoins = Math.max(0, Math.floor(dto.coinsToSpendUzs ?? 0));
-      const coinsAppliedUzs = Math.min(requestedCoins, subtotalUzs, payer.coinBalance);
-      let discountUzs = 0;
-      let promoCodeId: string | null = null;
-      if (dto.promoCode?.trim()) {
-        const promo = await this.promotions.validate(dto.promoCode, subtotalUzs, userId);
-        discountUzs = promo.discountUzs;
-        promoCodeId = promo.promoCodeId;
+      const address = await this.resolveAddressSnapshot(tx, userId, dto);
+
+      if (dto.deliveryPhone || dto.deliveryFirstName || dto.deliveryLastName) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            phone: dto.deliveryPhone ?? undefined,
+            firstName: dto.deliveryFirstName ?? undefined,
+            lastName: dto.deliveryLastName ?? undefined,
+          },
+        });
       }
-      const cashPaidUzs = Math.max(0, subtotalUzs - coinsAppliedUzs - discountUzs);
 
-      const birthDate =
-        dto.birthDate !== undefined ? new Date(`${dto.birthDate}T00:00:00.000Z`) : undefined;
-
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          phone: dto.deliveryPhone ?? undefined,
-          firstName: dto.deliveryFirstName ?? undefined,
-          lastName: dto.deliveryLastName ?? undefined,
-          ...(birthDate !== undefined ? { birthDate } : {}),
-        },
-      });
+      for (const line of lines) {
+        const product = byId.get(line.productId)!;
+        if (line.quantity > product.stockQuantity) {
+          throw new BadRequestException(`Insufficient stock for ${product.title}`);
+        }
+        const updated = await tx.product.updateMany({
+          where: { id: product.id, stockQuantity: { gte: line.quantity } },
+          data: { stockQuantity: { decrement: line.quantity } },
+        });
+        if (updated.count !== 1) {
+          throw new BadRequestException(`Insufficient stock for ${product.title}`);
+        }
+      }
 
       const order = await tx.order.create({
         data: {
           userId,
-          subtotalUzs,
-          totalUzs: subtotalUzs,
-          coinsAppliedUzs,
-          cashPaidUzs,
-          discountUzs,
-          promoCodeId,
+          subtotalKrw,
+          totalKrw: subtotalKrw,
+          discountKrw: 0,
           deliveryPhone: dto.deliveryPhone ?? null,
           deliveryFirstName: dto.deliveryFirstName ?? null,
           deliveryLastName: dto.deliveryLastName ?? null,
-          deliveryLatitude: dto.deliveryLatitude ?? null,
-          deliveryLongitude: dto.deliveryLongitude ?? null,
+          ...address,
         },
       });
 
-      await this.coinsService.debitCheckoutSpend(tx, userId, order.id, coinsAppliedUzs);
-      const userCart = await tx.cart.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-      if (userCart) {
-        await tx.cartItem.deleteMany({ where: { cartId: userCart.id } });
-      }
-
-      /** Gram-tracked inventory: aggregate demand per product (multiple lines can reference same SKU). */
-      const gramsNeededByProduct = new Map<string, number>();
-      for (const line of lines) {
-        const p = byId.get(line.productId)!;
-        const resolved = resolveProductUnitPrice(p.priceUzs, p.sizes, presetById, line.sizeId);
-        const g = (resolved.gramsSnapshot ?? 0) * line.quantity;
-        if (p.stockGrams !== null && p.stockGrams !== undefined) {
-          if (g <= 0) {
-            throw new BadRequestException(
-              `Product "${p.title}" tracks inventory by volume; choose a valid size`,
-            );
-          }
-          gramsNeededByProduct.set(
-            line.productId,
-            (gramsNeededByProduct.get(line.productId) ?? 0) + g,
-          );
-        }
-      }
-
-      for (const [pid, need] of gramsNeededByProduct) {
-        const p = byId.get(pid)!;
-        if (p.stockGrams! < need) {
-          throw new BadRequestException(`Insufficient volume for ${p.title}`);
-        }
-        const updated = await tx.product.updateMany({
-          where: { id: pid, stockGrams: { gte: need } },
-          data: { stockGrams: { decrement: need } },
-        });
-        if (updated.count !== 1) {
-          throw new BadRequestException(`Insufficient volume for ${p.title}`);
-        }
-      }
-
       const items: OrderItem[] = [];
       for (const line of lines) {
-        const product: Product = byId.get(line.productId)!;
-        const resolved = resolveProductUnitPrice(product.priceUzs, product.sizes, presetById, line.sizeId);
-        const gramsForLine = (resolved.gramsSnapshot ?? 0) * line.quantity;
-
+        const product = byId.get(line.productId)!;
         const item = await tx.orderItem.create({
           data: {
             orderId: order.id,
             productId: product.id,
             quantity: line.quantity,
-            unitPriceUzs: resolved.unitPriceUzs,
-            titleSnapshot: orderItemTitleSnapshot(product.title, resolved.sizeLabelSnapshot),
-            sizeId: resolved.sizeIdForDb,
-            sizeLabelSnapshot: resolved.sizeLabelSnapshot,
-            gramsSnapshot: resolved.gramsSnapshot,
+            unitPriceKrw: product.priceKrw,
+            titleSnapshot: product.title,
+            imageSnapshot: product.images[0] ?? null,
+            unitNameSnapshot: product.measurementUnit.name,
+            unitSymbolSnapshot: product.measurementUnit.symbol,
           },
         });
-        await tx.stockMovement.create({
+        await tx.inventoryMovement.create({
           data: {
             orderId: order.id,
             productId: product.id,
             delta: -line.quantity,
-            deltaGrams: gramsForLine > 0 ? -gramsForLine : 0,
             reason: "ORDER_CREATE",
           },
         });
         items.push(item);
       }
 
+      const cart = await tx.cart.findUnique({ where: { userId }, select: { id: true } });
+      if (cart) {
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+      }
+
       return { ...order, items };
     });
-    await this.prisma.analyticsEvent.create({
-      data: {
-        eventType: "ORDER_CREATED",
-        userId,
-        sessionId: `user:${userId}`,
-        orderId: created.id,
-        properties: { subtotalUzs: created.subtotalUzs, coinsAppliedUzs: created.coinsAppliedUzs },
-      },
-    });
-    if (dto.promoCode?.trim()) {
-      const promo = await this.prisma.promoCode.findUnique({
-        where: { code: dto.promoCode.trim().toUpperCase() },
-        select: { id: true },
-      });
-      if (promo && created.discountUzs > 0) {
-        await this.prisma.promoRedemption.create({
-          data: {
-            promoCodeId: promo.id,
-            userId,
-            orderId: created.id,
-            discountUzs: created.discountUzs,
-          },
-        });
-      }
-    }
+
     await this.orderEvents.notifyOrdersChanged({
       reason: "created",
       orderId: created.id,
@@ -236,22 +156,7 @@ export class OrdersService {
       updatedAt: created.updatedAt.toISOString(),
     });
 
-    const touchedProductIds = [
-      ...new Set(created.items.map((i) => i.productId).filter((x): x is string => Boolean(x))),
-    ];
-    if (touchedProductIds.length > 0) {
-      const stockRows = await this.prisma.product.findMany({
-        where: { id: { in: touchedProductIds } },
-        select: { id: true, stock: true, stockGrams: true },
-      });
-      for (const row of stockRows) {
-        await this.orderEvents.notifyProductStockChanged(row.id, {
-          stock: row.stock,
-          stockGrams: row.stockGrams,
-        });
-      }
-    }
-
+    await this.emitStockChanges(created.items);
     return created;
   }
 
@@ -373,65 +278,43 @@ export class OrdersService {
       where: { id: orderId },
       include: {
         user: { select: { telegramId: true, locale: true } },
-        items: {
-          orderBy: { id: "asc" },
-          include: { product: { select: { images: true } } },
-        },
+        items: true,
       },
     });
     if (!prev) {
       throw new NotFoundException("Order not found");
     }
     if (prev.status === status) {
-      const { user: _u, items: _items, ...order } = prev;
+      const { user: _user, items: _items, ...order } = prev;
       return order as Order;
     }
 
-    const { order: updated, referralPayout } = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const next = await tx.order.update({
         where: { id: orderId },
         data: { status },
       });
       if (status === "CANCELLED" && prev.status !== "CANCELLED") {
-        await this.coinsService.refundOrderCoinsIfNeeded(tx, orderId);
-        const movements = await tx.stockMovement.findMany({
+        const movements = await tx.inventoryMovement.findMany({
           where: { orderId, reason: "ORDER_CREATE" },
         });
-        for (const m of movements) {
-          const data: Prisma.ProductUpdateInput = {};
-          if (m.delta !== 0) {
-            data.stock = { increment: -m.delta };
-          }
-          if (m.deltaGrams !== 0) {
-            data.stockGrams = { increment: -m.deltaGrams };
-          }
-          if (Object.keys(data).length > 0) {
-            await tx.product.update({ where: { id: m.productId }, data });
-          }
-          await tx.stockMovement.create({
+        for (const movement of movements) {
+          await tx.product.update({
+            where: { id: movement.productId },
+            data: { stockQuantity: { increment: -movement.delta } },
+          });
+          await tx.inventoryMovement.create({
             data: {
               orderId,
-              productId: m.productId,
-              delta: -m.delta,
-              deltaGrams: -m.deltaGrams,
+              productId: movement.productId,
+              delta: -movement.delta,
               reason: "ORDER_CANCEL",
             },
           });
         }
-        await tx.promoRedemption.deleteMany({ where: { orderId } });
       }
-      const payout = await this.coinsService.tryReferralPayoutOnOrderQualifying(tx, next, prev.status);
-      return { order: next, referralPayout: payout };
+      return next;
     });
-
-    if (referralPayout) {
-      void this.telegramNotify.notifyCoinsCredit(
-        referralPayout.telegramId,
-        referralPayout.coins,
-        referralPayout.locale,
-        "referral",
-      );
-    }
 
     await this.orderEvents.notifyOrdersChanged({
       reason: "updated",
@@ -441,14 +324,12 @@ export class OrdersService {
       updatedAt: updated.updatedAt.toISOString(),
     });
 
-    const productImageRaw = firstOrderLineProductImage(prev.items);
-
     await this.telegramNotify.notifyOrderStatusChanged(
       prev.user.telegramId,
       updated.id,
       updated.status,
       prev.user.locale,
-      productImageRaw,
+      prev.items[0]?.imageSnapshot,
     );
 
     void this.userNotifications
@@ -468,26 +349,83 @@ export class OrdersService {
       })
       .catch(() => undefined);
 
+    await this.emitStockChanges(prev.items);
     return updated;
   }
 
-  private async getById(orderId: string): Promise<Order> {
-    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
-    if (!order) {
-      throw new NotFoundException("Order not found");
+  private async resolveOrderLines(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    fallbackItems: OrderLineInput[],
+  ): Promise<OrderLineInput[]> {
+    const cart = await tx.cart.findUnique({
+      where: { userId },
+      include: { items: true },
+    });
+    const source = cart?.items.length
+      ? cart.items.map((item) => ({ productId: item.productId, quantity: item.qty }))
+      : fallbackItems;
+    const merged = new Map<string, OrderLineInput>();
+    for (const line of source) {
+      const prev = merged.get(line.productId);
+      merged.set(line.productId, {
+        productId: line.productId,
+        quantity: (prev?.quantity ?? 0) + line.quantity,
+      });
     }
-    return order;
+    return [...merged.values()];
   }
-}
 
-function firstOrderLineProductImage(
-  items: Array<{ product: { images: string[] } | null }>,
-): string | undefined {
-  for (const item of items) {
-    const raw = item.product?.images?.[0];
-    if (raw) {
-      return raw;
+  private async resolveAddressSnapshot(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    dto: CreateOrderDto,
+  ): Promise<AddressSnapshot> {
+    if (dto.addressId) {
+      const address = await tx.userAddress.findUnique({ where: { id: dto.addressId } });
+      if (!address || address.userId !== userId) {
+        throw new BadRequestException("Selected address is invalid");
+      }
+      return {
+        addressId: address.id,
+        addressNameSnapshot: address.addressName,
+        roadAddressSnapshot: address.roadAddressName,
+        jibunAddressSnapshot: address.jibunAddressName,
+        buildingNameSnapshot: address.buildingName,
+        zoneNoSnapshot: address.zoneNo,
+        detailAddressSnapshot: address.detailAddress,
+        latitudeSnapshot: address.latitude,
+        longitudeSnapshot: address.longitude,
+      };
+    }
+
+    if (!dto.addressName?.trim() || !dto.detailAddress?.trim()) {
+      throw new BadRequestException("A valid selected address and detail address are required");
+    }
+    return {
+      addressId: null,
+      addressNameSnapshot: dto.addressName.trim(),
+      roadAddressSnapshot: dto.roadAddressName?.trim() || null,
+      jibunAddressSnapshot: dto.jibunAddressName?.trim() || null,
+      buildingNameSnapshot: dto.buildingName?.trim() || null,
+      zoneNoSnapshot: dto.zoneNo?.trim() || null,
+      detailAddressSnapshot: dto.detailAddress.trim(),
+      latitudeSnapshot: dto.latitude ?? null,
+      longitudeSnapshot: dto.longitude ?? null,
+    };
+  }
+
+  private async emitStockChanges(items: OrderItem[]) {
+    const productIds = [...new Set(items.map((item) => item.productId).filter((id): id is string => Boolean(id)))];
+    if (productIds.length === 0) return;
+    const rows = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, stockQuantity: true },
+    });
+    for (const row of rows) {
+      await this.orderEvents.notifyProductStockChanged(row.id, {
+        stockQuantity: row.stockQuantity,
+      });
     }
   }
-  return undefined;
 }

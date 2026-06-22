@@ -5,6 +5,7 @@ import type { AppLocale } from "../common/locale.util";
 const STATUS_EMOJI: Record<OrderStatus, string> = {
   PENDING: "🟡",
   CONFIRMED: "🔵",
+  PREPARING: "🟠",
   SHIPPED: "🟣",
   DELIVERED: "🟢",
   CANCELLED: "🔴",
@@ -14,6 +15,7 @@ const STATUS_LABEL: Record<AppLocale, Record<OrderStatus, string>> = {
   ru: {
     PENDING: "Ожидает обработки",
     CONFIRMED: "Подтверждён",
+    PREPARING: "Готовится",
     SHIPPED: "Отправлен",
     DELIVERED: "Доставлен",
     CANCELLED: "Отменён",
@@ -21,6 +23,7 @@ const STATUS_LABEL: Record<AppLocale, Record<OrderStatus, string>> = {
   uz: {
     PENDING: "Kutilmoqda",
     CONFIRMED: "Tasdiqlangan",
+    PREPARING: "Tayyorlanmoqda",
     SHIPPED: "Yo‘lda",
     DELIVERED: "Yetkazilgan",
     CANCELLED: "Bekor qilingan",

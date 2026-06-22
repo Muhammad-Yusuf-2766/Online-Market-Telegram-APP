@@ -1,31 +1,26 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import {
-  cartLineKey,
-  DEFAULT_CART_SIZE_ID,
-} from '../../shared/lib/productSizes';
 import { trackEvent } from '../../shared/lib/analytics';
 
 const STORAGE_KEY = 'pb_cart';
+const DEFAULT_CART_UNIT_ID = 'default';
+
+function cartLineKey(productId: string): string {
+  return `${productId}::${DEFAULT_CART_UNIT_ID}`;
+}
 
 export type CartLine = {
   lineKey: string;
   productId: string;
-  sizeId: string;
+  unitId: string;
   title: string;
-  sizeLabel: string | null;
-  unitPriceUzs: number;
+  unitLabel: string | null;
+  unitPriceKrw: number;
   imageUrl: string | null;
   quantity: number;
 };
 
-export type AppliedPromo = {
-  code: string;
-  discountUzs: number;
-};
-
 export type CartState = {
   items: CartLine[];
-  appliedPromo: AppliedPromo | null;
 };
 
 function parseCartLine(raw: unknown): CartLine | null {
@@ -38,27 +33,31 @@ function parseCartLine(raw: unknown): CartLine | null {
   ) {
     return null;
   }
-  let unitPriceUzs: number;
-  if (typeof o.unitPriceUzs === 'number') {
-    unitPriceUzs = o.unitPriceUzs;
+  let unitPriceKrw: number;
+  if (typeof o.unitPriceKrw === 'number') {
+    unitPriceKrw = o.unitPriceKrw;
+  } else if (typeof o.unitPriceUzs === 'number') {
+    unitPriceKrw = o.unitPriceUzs;
   } else if (typeof (o as { unitPriceCents?: number }).unitPriceCents === 'number') {
-    unitPriceUzs = Math.round((o as { unitPriceCents: number }).unitPriceCents / 100);
+    unitPriceKrw = Math.round((o as { unitPriceCents: number }).unitPriceCents / 100);
   } else {
     return null;
   }
-  const sizeId =
-    typeof o.sizeId === 'string' && o.sizeId.length > 0
-      ? o.sizeId
-      : DEFAULT_CART_SIZE_ID;
+  const unitId =
+    typeof o.unitId === 'string' && o.unitId.length > 0
+      ? o.unitId
+      : DEFAULT_CART_UNIT_ID;
   const lineKey =
     typeof o.lineKey === 'string' && o.lineKey.length > 0
       ? o.lineKey
-      : cartLineKey(o.productId, sizeId);
-  const sizeLabel =
-    o.sizeLabel === null || o.sizeLabel === undefined
+      : cartLineKey(o.productId);
+  const unitLabel =
+    o.unitLabel === null || o.unitLabel === undefined
       ? null
-      : typeof o.sizeLabel === 'string'
-        ? o.sizeLabel
+      : typeof o.unitLabel === 'string'
+        ? o.unitLabel
+        : typeof o.sizeLabel === 'string'
+          ? o.sizeLabel
         : null;
   const imageUrl =
     o.imageUrl === null || typeof o.imageUrl === 'string'
@@ -67,10 +66,10 @@ function parseCartLine(raw: unknown): CartLine | null {
   return {
     lineKey,
     productId: o.productId,
-    sizeId,
+    unitId,
     title: o.title,
-    sizeLabel,
-    unitPriceUzs,
+    unitLabel,
+    unitPriceKrw,
     imageUrl,
     quantity: o.quantity,
   };
@@ -94,7 +93,7 @@ function saveCart(items: CartLine[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
-const initialState: CartState = { items: loadCart(), appliedPromo: null };
+const initialState: CartState = { items: loadCart() };
 
 export const cartSlice = createSlice({
   name: 'cart',
@@ -108,41 +107,39 @@ export const cartSlice = createSlice({
       state,
       action: PayloadAction<{
         productId: string;
-        sizeId: string;
+        unitId?: string;
         title: string;
-        sizeLabel: string | null;
-        unitPriceUzs: number;
+        unitLabel: string | null;
+        unitPriceKrw: number;
         imageUrl: string | null;
         quantity?: number;
       }>,
     ) {
       const qty = action.payload.quantity ?? 1;
-      const lineKey = cartLineKey(
-        action.payload.productId,
-        action.payload.sizeId,
-      );
+      const unitId = action.payload.unitId ?? DEFAULT_CART_UNIT_ID;
+      const lineKey = cartLineKey(action.payload.productId);
       const existing = state.items.find((i) => i.lineKey === lineKey);
       if (existing) {
         existing.quantity += qty;
         existing.title = action.payload.title;
-        existing.sizeLabel = action.payload.sizeLabel;
-        existing.unitPriceUzs = action.payload.unitPriceUzs;
+        existing.unitLabel = action.payload.unitLabel;
+        existing.unitPriceKrw = action.payload.unitPriceKrw;
         existing.imageUrl = action.payload.imageUrl;
       } else {
         state.items.push({
           lineKey,
           productId: action.payload.productId,
-          sizeId: action.payload.sizeId,
+          unitId,
           title: action.payload.title,
-          sizeLabel: action.payload.sizeLabel,
-          unitPriceUzs: action.payload.unitPriceUzs,
+          unitLabel: action.payload.unitLabel,
+          unitPriceKrw: action.payload.unitPriceKrw,
           imageUrl: action.payload.imageUrl,
           quantity: qty,
         });
       }
       trackEvent('ADD_TO_CART', {
         productId: action.payload.productId,
-        properties: { sizeId: action.payload.sizeId, quantity: qty },
+        properties: { quantity: qty },
       });
       saveCart(state.items);
     },
@@ -157,7 +154,6 @@ export const cartSlice = createSlice({
       if (action.payload.quantity < 1) {
         trackEvent('REMOVE_FROM_CART', {
           productId: line.productId,
-          properties: { sizeId: line.sizeId },
         });
         state.items = state.items.filter(
           (i) => i.lineKey !== action.payload.lineKey,
@@ -172,7 +168,6 @@ export const cartSlice = createSlice({
       if (current) {
         trackEvent('REMOVE_FROM_CART', {
           productId: current.productId,
-          properties: { sizeId: current.sizeId },
         });
       }
       state.items = state.items.filter((i) => i.lineKey !== action.payload);
@@ -180,11 +175,7 @@ export const cartSlice = createSlice({
     },
     clearCart(state) {
       state.items = [];
-      state.appliedPromo = null;
       saveCart(state.items);
-    },
-    setAppliedPromo(state, action: PayloadAction<AppliedPromo | null>) {
-      state.appliedPromo = action.payload;
     },
   },
 });
@@ -195,5 +186,4 @@ export const {
   setLineQuantity,
   removeLine,
   clearCart,
-  setAppliedPromo,
 } = cartSlice.actions;

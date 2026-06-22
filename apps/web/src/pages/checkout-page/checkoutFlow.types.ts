@@ -5,11 +5,16 @@ export const CHECKOUT_FORM_DRAFT_STORAGE_KEY = 'pb.checkout.formDraft.v1';
 export type CheckoutFormDraft = {
   nationalDigits: string;
   firstName: string;
-  useCoins: boolean;
 };
 
 export type CheckoutAddressSelection = {
-  lat: number;
-  lng: number;
-  label: string;
+  addressId?: string;
+  addressName: string;
+  roadAddressName?: string | null;
+  jibunAddressName?: string | null;
+  buildingName?: string | null;
+  zoneNo?: string | null;
+  detailAddress: string;
+  latitude?: number | null;
+  longitude?: number | null;
 };

@@ -1,10 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
 import {
-  ArrayMinSize,
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
-  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -12,15 +10,7 @@ import {
   MaxLength,
   Min,
   MinLength,
-  ValidateNested,
 } from "class-validator";
-import { ProductSizeLineDto } from "./product-size-line.dto";
-
-export enum ProductGenderDto {
-  MEN = "MEN",
-  WOMEN = "WOMEN",
-  UNISEX = "UNISEX",
-}
 
 export class CreateProductDto {
   @ApiProperty()
@@ -35,123 +25,64 @@ export class CreateProductDto {
   @MaxLength(10_000)
   description?: string;
 
-  @ApiProperty({
-    description:
-      "Base price in UZS (integer). If `sizes` is set, server sets catalog `priceUzs` from 10 g if present, else minimum size price.",
-  })
+  @ApiProperty({ description: "Price in KRW (integer)" })
   @IsInt()
   @Min(0)
-  priceUzs!: number;
+  priceKrw!: number;
 
-  @ApiPropertyOptional({
-    type: [ProductSizeLineDto],
-    description: "Lines referencing ProductSizePreset ids with per-product prices.",
-  })
+  @ApiProperty()
+  @IsString()
+  @MaxLength(64)
+  categoryId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(64)
+  measurementUnitId!: string;
+
+  @ApiPropertyOptional({ type: [String], maxItems: 2 })
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
-  @ValidateNested({ each: true })
-  @Type(() => ProductSizeLineDto)
-  sizes?: ProductSizeLineDto[];
-
-  @ApiPropertyOptional({ type: [String] })
-  @IsOptional()
-  @IsArray()
+  @ArrayMaxSize(2)
   @IsString({ each: true })
   images?: string[];
 
-  @ApiPropertyOptional({ description: "Optional inventory; omit for untracked stock" })
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  stockQuantity!: number;
+
+  @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
   @Min(0)
-  stock?: number;
+  lowStockThreshold?: number;
 
   @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  categoryId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  brandId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  familyId?: string;
-
-  @ApiPropertyOptional({ enum: ProductGenderDto, default: ProductGenderDto.UNISEX })
-  @IsOptional()
-  @IsEnum(ProductGenderDto)
-  gender?: ProductGenderDto;
-
-  @ApiPropertyOptional({ type: [String], description: "Top notes (free text labels)." })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  notesTop?: string[];
-
-  @ApiPropertyOptional({ type: [String], description: "Heart notes." })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  notesHeart?: string[];
-
-  @ApiPropertyOptional({ type: [String], description: "Base notes." })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  notesBase?: string[];
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  isBestseller?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  isNewArrival?: boolean;
-
-  @ApiPropertyOptional({ description: "4-digit fragrance release year." })
-  @IsOptional()
-  @IsInt()
-  @Min(1900)
-  @Max(3000)
-  releaseYear?: number;
-
-  @ApiPropertyOptional({ description: "Original (pre-discount) price in UZS." })
   @IsOptional()
   @IsInt()
   @Min(0)
-  oldPriceUzs?: number;
+  oldPriceKrw?: number;
 
-  @ApiPropertyOptional({ description: "Discount percent (0..100)." })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
   discountPercent?: number;
 
-  @ApiPropertyOptional({ description: "Threshold for low-stock alerts." })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  lowStockThreshold?: number;
+  @IsBoolean()
+  isOnSale?: boolean;
 
-  @ApiPropertyOptional({ description: "Total volume in stock in grams (parfum)." })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  stockGrams?: number;
+  @IsBoolean()
+  isBestSeller?: boolean;
 
-  @ApiPropertyOptional({ description: "Low-stock threshold in grams." })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  lowStockGramsThreshold?: number;
+  @IsBoolean()
+  isActive?: boolean;
 }

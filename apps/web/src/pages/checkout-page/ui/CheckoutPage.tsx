@@ -1,12 +1,5 @@
 import { Button, Input, Spinner } from '@telegram-apps/telegram-ui';
-import { Switch } from '../../../shared/ui/Switch';
-import '../../coins-page/ui/coins-page.css';
-import {
-  initDataUser,
-  isTMA,
-  openLink,
-  type User as TelegramInitUser,
-} from '@telegram-apps/sdk';
+import { initDataUser, type User as TelegramInitUser } from '@telegram-apps/sdk';
 import { useSignal } from '@telegram-apps/sdk-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +7,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   useClearCartRemoteMutation,
   useCreateOrderMutation,
-  useValidatePromoCodeMutation,
   type UserProfile,
 } from '../../../app/parfumApi';
 import { useParfumMeQuery } from '../../../app/useParfumMeQuery';
@@ -23,7 +15,6 @@ import type { TelegramAuthUser } from '../../../features/auth/authSlice';
 import type { CartLine } from '../../../features/cart/cartSlice';
 import { clearCart } from '../../../features/cart/cartSlice';
 import { useTelegramSession } from '../../../features/session/telegramSessionContext';
-import { DEFAULT_CART_SIZE_ID } from '../../../shared/lib/productSizes';
 import { formatPrice } from '../../../shared/lib/money';
 import {
   formatUzPhoneDisplay,
@@ -56,7 +47,6 @@ function readStoredCheckoutFormDraft(userId: string): CheckoutFormDraft | null {
       row.userId !== userId ||
       typeof row.nationalDigits !== 'string' ||
       typeof row.firstName !== 'string' ||
-      typeof row.useCoins !== 'boolean' ||
       typeof row.savedAt !== 'number'
     ) {
       return null;
@@ -68,7 +58,6 @@ function readStoredCheckoutFormDraft(userId: string): CheckoutFormDraft | null {
     return {
       nationalDigits: row.nationalDigits,
       firstName: row.firstName,
-      useCoins: row.useCoins,
     };
   } catch {
     return null;
@@ -81,7 +70,6 @@ function writeStoredCheckoutFormDraft(userId: string, draft: CheckoutFormDraft):
     savedAt: Date.now(),
     nationalDigits: draft.nationalDigits,
     firstName: draft.firstName,
-    useCoins: draft.useCoins,
   };
   sessionStorage.setItem(CHECKOUT_FORM_DRAFT_STORAGE_KEY, JSON.stringify(payload));
 }
@@ -92,52 +80,31 @@ function clearStoredCheckoutFormDraft(): void {
 
 function getInitialCheckoutFields(
   me: UserProfile,
-): { nationalDigits: string; firstName: string; useCoins: boolean } {
+): { nationalDigits: string; firstName: string } {
   const stored = readStoredCheckoutFormDraft(me.id);
   if (stored) {
     return {
       nationalDigits: parseNationalDigits(stored.nationalDigits),
       firstName: stored.firstName,
-      useCoins: stored.useCoins,
     };
   }
   return {
     nationalDigits: parseNationalDigits(me.phone ?? ''),
     firstName: me.firstName ?? '',
-    useCoins: true,
   };
 }
 
-function openMapsExternal(lat: number, lng: number): void {
-  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
-  if (openLink.isAvailable()) {
-    openLink(url);
-    return;
-  }
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-/** Prefer saved profile; fill gaps from Telegram Web App initData / auth exchange payload. */
 function mergeCheckoutProfile(
   me: UserProfile | undefined,
   authUser: TelegramAuthUser | null,
   tgUser: TelegramInitUser | undefined,
 ): UserProfile | null {
-  const tgFirst =
-    tgUser?.first_name?.trim() ||
-    authUser?.firstName?.trim() ||
-    null;
-  const tgLast =
-    tgUser?.last_name?.trim() ||
-    authUser?.lastName?.trim() ||
-    null;
+  const tgFirst = tgUser?.first_name?.trim() || authUser?.firstName?.trim() || null;
+  const tgLast = tgUser?.last_name?.trim() || authUser?.lastName?.trim() || null;
   const tgUsername =
-    tgUser?.username?.trim() ||
-    authUser?.telegramUsername?.trim() ||
-    null;
+    tgUser?.username?.trim() || authUser?.telegramUsername?.trim() || null;
   const telegramId =
-    authUser?.telegramId ??
-    (tgUser?.id != null ? String(tgUser.id) : null);
+    authUser?.telegramId ?? (tgUser?.id != null ? String(tgUser.id) : null);
 
   if (me) {
     return {
@@ -160,17 +127,13 @@ function mergeCheckoutProfile(
     phone: null,
     birthDate: null,
     gender: 'UNSPECIFIED',
-    referralCode: '',
-    coinBalance: 0,
+    isActive: true,
     createdAt: '',
     updatedAt: '',
   };
 }
 
-function errorMessage(
-  err: unknown,
-  t: (key: string) => string,
-): string {
+function errorMessage(err: unknown, t: (key: string) => string): string {
   if (err && typeof err === 'object' && 'data' in err) {
     const data = err.data;
     if (data && typeof data === 'object' && 'message' in data) {
@@ -179,15 +142,19 @@ function errorMessage(
       if (Array.isArray(m)) return m.map(String).join(', ');
     }
   }
-  if (
-    err &&
-    typeof err === 'object' &&
-    'status' in err &&
-    err.status === 'FETCH_ERROR'
-  ) {
+  if (err && typeof err === 'object' && 'status' in err && err.status === 'FETCH_ERROR') {
     return t('checkout.networkError');
   }
   return t('checkout.genericError');
+}
+
+function addressLabel(address: CheckoutAddressSelection): string {
+  return [
+    address.roadAddressName || address.addressName || address.jibunAddressName,
+    address.detailAddress,
+  ]
+    .filter(Boolean)
+    .join(', ');
 }
 
 function CheckoutForm({
@@ -201,33 +168,19 @@ function CheckoutForm({
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const [nationalDigits, setNationalDigits] = useState(() =>
-    getInitialCheckoutFields(me).nationalDigits,
+  const [nationalDigits, setNationalDigits] = useState(
+    () => getInitialCheckoutFields(me).nationalDigits,
   );
   const [phoneUiError, setPhoneUiError] = useState<string | null>(null);
-  const [firstName, setFirstName] = useState(() => getInitialCheckoutFields(me).firstName);
-  const [shipLat, setShipLat] = useState<number | null>(null);
-  const [shipLng, setShipLng] = useState<number | null>(null);
-  const [shipLabel, setShipLabel] = useState('');
-  const [shippingUiError, setShippingUiError] = useState<string | null>(null);
-  const [useCoins, setUseCoins] = useState(() => getInitialCheckoutFields(me).useCoins);
-  const appliedPromoFromCart = useAppSelector((s) => s.cart.appliedPromo);
-  const [promoCode, setPromoCode] = useState(appliedPromoFromCart?.code ?? '');
-  const [promoDiscount, setPromoDiscount] = useState(
-    appliedPromoFromCart?.discountUzs ?? 0,
+  const [firstName, setFirstName] = useState(
+    () => getInitialCheckoutFields(me).firstName,
   );
-
-  useEffect(() => {
-    if (!appliedPromoFromCart) return;
-    setPromoCode(appliedPromoFromCart.code);
-    setPromoDiscount(appliedPromoFromCart.discountUzs);
-  }, [appliedPromoFromCart]);
-
-  const mustPickShippingPoint = isTMA();
+  const [selectedAddress, setSelectedAddress] =
+    useState<CheckoutAddressSelection | null>(null);
+  const [shippingUiError, setShippingUiError] = useState<string | null>(null);
   const [createOrder, { isLoading: submitting, error }] =
     useCreateOrderMutation();
   const [clearCartRemote] = useClearCartRemoteMutation();
-  const [validatePromoCode, { isLoading: validatingPromo }] = useValidatePromoCodeMutation();
 
   useEffect(() => {
     trackEvent('CHECKOUT_START');
@@ -238,21 +191,12 @@ function CheckoutForm({
     const selected = state.checkoutAddressSelection;
     const formDraft = state.checkoutFormDraft;
     if (formDraft) {
-      if (typeof formDraft.nationalDigits === 'string') {
-        setNationalDigits(parseNationalDigits(formDraft.nationalDigits));
-      }
-      if (typeof formDraft.firstName === 'string') {
-        setFirstName(formDraft.firstName);
-      }
-      if (typeof formDraft.useCoins === 'boolean') {
-        setUseCoins(formDraft.useCoins);
-      }
+      setNationalDigits(parseNationalDigits(formDraft.nationalDigits));
+      setFirstName(formDraft.firstName);
       clearStoredCheckoutFormDraft();
     }
     if (selected) {
-      setShipLat(selected.lat);
-      setShipLng(selected.lng);
-      setShipLabel(selected.label);
+      setSelectedAddress(selected);
       setShippingUiError(null);
     }
     if (selected || formDraft) {
@@ -261,16 +205,10 @@ function CheckoutForm({
   }, [location.pathname, location.state, navigate]);
 
   const subtotal = cartItems.reduce(
-    (sum, line) => sum + line.unitPriceUzs * line.quantity,
+    (sum, line) => sum + line.unitPriceKrw * line.quantity,
     0,
   );
-
-  const maxCoins = Math.min(me.coinBalance ?? 0, subtotal);
-  const coinsToSpend = useCoins && maxCoins > 0 ? maxCoins : 0;
-  const cashToPay = Math.max(0, subtotal - coinsToSpend - promoDiscount);
-
-  const placeOrderDisabled =
-    submitting || (mustPickShippingPoint && (shipLat === null || shipLng === null));
+  const placeOrderDisabled = submitting || !selectedAddress;
 
   return (
     <div className="checkout-page">
@@ -309,85 +247,44 @@ function CheckoutForm({
             required
             header={t('checkout.firstName')}
           />
-          {mustPickShippingPoint ? (
-            <div className="form-field">
-              <p
-                className="page-placeholder"
-                style={{ margin: '0 0 8px', fontWeight: 600 }}
-              >
-                {t('checkout.shippingTitle')}
-              </p>
-              <p className="page-placeholder" style={{ margin: '0 0 8px' }}>
-                {t('checkout.shippingHint')}
-              </p>
-              <Button
-                mode={shipLat != null && shipLng != null ? 'bezeled' : 'filled'}
-                size="m"
-                stretched
-                disabled={submitting}
-                onClick={() => {
-                  const draft: CheckoutFormDraft = {
-                    nationalDigits,
-                    firstName,
-                    useCoins,
-                  };
-                  writeStoredCheckoutFormDraft(me.id, draft);
-                  navigate('/checkout/address', {
-                    state: {
-                      checkoutAddressDraft: {
-                        lat: shipLat,
-                        lng: shipLng,
-                        label: shipLabel,
-                      },
-                      checkoutFormDraft: draft,
-                    },
-                  });
-                }}
-              >
-                {shipLat != null && shipLng != null
-                  ? t('checkout.changeAddress')
-                  : t('checkout.chooseAddress')}
-              </Button>
-              {shipLat != null && shipLng != null ? (
-                <div className="checkout-address-preview">
-                  {shipLabel ? (
-                    <p className="checkout-address-preview__label">{shipLabel}</p>
-                  ) : null}
+          <div className="form-field">
+            <p className="page-placeholder" style={{ margin: '0 0 8px', fontWeight: 600 }}>
+              {t('checkout.shippingTitle')}
+            </p>
+            <Button
+              mode={selectedAddress ? 'bezeled' : 'filled'}
+              size="m"
+              stretched
+              disabled={submitting}
+              onClick={() => {
+                const draft: CheckoutFormDraft = { nationalDigits, firstName };
+                writeStoredCheckoutFormDraft(me.id, draft);
+                navigate('/checkout/address', {
+                  state: {
+                    checkoutAddressSelection: selectedAddress ?? undefined,
+                    checkoutFormDraft: draft,
+                  },
+                });
+              }}
+            >
+              {selectedAddress ? t('checkout.changeAddress') : t('checkout.chooseAddress')}
+            </Button>
+            {selectedAddress ? (
+              <div className="checkout-address-preview">
+                <p className="checkout-address-preview__label">
+                  {addressLabel(selectedAddress)}
+                </p>
+                {selectedAddress.zoneNo ? (
                   <p className="checkout-address-preview__coords">
-                    {shipLat.toFixed(5)}, {shipLng.toFixed(5)}
+                    {selectedAddress.zoneNo}
                   </p>
-                  <div className="checkout-address-preview__actions">
-                    <Button
-                      mode="bezeled"
-                      size="s"
-                      onClick={() => openMapsExternal(shipLat, shipLng)}
-                    >
-                      {t('checkout.openInMaps')}
-                    </Button>
-                    <Button
-                      mode="plain"
-                      size="s"
-                      disabled={submitting}
-                      onClick={() => {
-                        setShipLat(null);
-                        setShipLng(null);
-                        setShipLabel('');
-                        setShippingUiError(null);
-                      }}
-                    >
-                      {t('checkout.clearShipping')}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
         {shippingUiError ? (
-          <p
-            className="page-placeholder"
-            style={{ color: 'var(--pb-danger, #b42318)', marginBottom: 8 }}
-          >
+          <p className="page-placeholder" style={{ color: 'var(--pb-danger, #b42318)', marginBottom: 8 }}>
             {shippingUiError}
           </p>
         ) : null}
@@ -396,56 +293,6 @@ function CheckoutForm({
             {errorMessage(error, t)}
           </p>
         ) : null}
-        {maxCoins > 0 ? (
-          <div className="checkout-coins">
-            <div className="checkout-coins__row">
-              <label className="checkout-coins__label" htmlFor="checkout-use-coins">
-                {t('checkout.useCoins')}
-              </label>
-              <Switch
-                id="checkout-use-coins"
-                checked={useCoins}
-                onCheckedChange={setUseCoins}
-                disabled={submitting}
-              />
-            </div>
-            <p className="page-placeholder" style={{ margin: '8px 0 0', fontSize: 13 }}>
-              {t('checkout.useCoinsHint', { max: maxCoins })} · {t('checkout.balance')}:{' '}
-              {formatPrice(me.coinBalance)}
-            </p>
-            <p className="page-placeholder" style={{ margin: '6px 0 0', fontSize: 13 }}>
-              {t('checkout.coinsApplied')}: {formatPrice(coinsToSpend)} · {t('checkout.payCash')}:{' '}
-              {formatPrice(cashToPay)}
-            </p>
-          </div>
-        ) : null}
-        <div className="form-field">
-          <Input
-            id="co-promo"
-            value={promoCode}
-            onChange={(e) => setPromoCode(e.target.value)}
-            placeholder={t('checkout.promoPlaceholder')}
-            header={t('checkout.promoCode')}
-          />
-          <Button
-            mode="bezeled"
-            size="s"
-            disabled={validatingPromo || !promoCode.trim()}
-            onClick={() => {
-              void validatePromoCode({ code: promoCode.trim(), subtotalUzs: subtotal })
-                .unwrap()
-                .then((res) => setPromoDiscount(res.discountUzs))
-                .catch(() => setPromoDiscount(0));
-            }}
-          >
-            {t('checkout.applyPromo')}
-          </Button>
-          {promoDiscount > 0 ? (
-            <p className="page-placeholder" style={{ margin: '6px 0 0', fontSize: 13 }}>
-              {t('checkout.promoDiscount')}: {formatPrice(promoDiscount)}
-            </p>
-          ) : null}
-        </div>
       </div>
       <div className="checkout-page__sticky-cta">
         <Button
@@ -464,34 +311,30 @@ function CheckoutForm({
                   setPhoneUiError(t('checkout.phoneInvalid'));
                   return;
                 }
-                if (
-                  mustPickShippingPoint &&
-                  (shipLat === null || shipLng === null)
-                ) {
+                if (!selectedAddress) {
                   setShippingUiError(t('checkout.shippingRequired'));
                   return;
                 }
-                trackEvent('CHECKOUT_SUBMIT', {
-                  properties: { subtotal, coinsToSpend, cashToPay },
-                });
+                trackEvent('CHECKOUT_SUBMIT', { properties: { subtotal } });
                 const res = await createOrder({
-                  items: cartItems.map((l) => ({
-                    productId: l.productId,
-                    quantity: l.quantity,
-                    ...(l.sizeId !== DEFAULT_CART_SIZE_ID
-                      ? { sizeId: l.sizeId }
-                      : {}),
+                  items: cartItems.map((line) => ({
+                    productId: line.productId,
+                    quantity: line.quantity,
                   })),
                   deliveryPhone: e164,
                   deliveryFirstName: firstName.trim() || undefined,
-                  ...(coinsToSpend > 0 ? { coinsToSpendUzs: coinsToSpend } : {}),
-                  ...(promoCode.trim() ? { promoCode: promoCode.trim() } : {}),
-                  ...(shipLat != null && shipLng != null
-                    ? {
-                        deliveryLatitude: shipLat,
-                        deliveryLongitude: shipLng,
-                      }
-                    : {}),
+                  ...(selectedAddress.addressId
+                    ? { addressId: selectedAddress.addressId }
+                    : {
+                        addressName: selectedAddress.addressName,
+                        roadAddressName: selectedAddress.roadAddressName,
+                        jibunAddressName: selectedAddress.jibunAddressName,
+                        buildingName: selectedAddress.buildingName,
+                        zoneNo: selectedAddress.zoneNo,
+                        detailAddress: selectedAddress.detailAddress,
+                        latitude: selectedAddress.latitude,
+                        longitude: selectedAddress.longitude,
+                      }),
                 }).unwrap();
                 trackEvent('ORDER_CREATED', { orderId: res.id });
                 clearStoredCheckoutFormDraft();
@@ -504,7 +347,7 @@ function CheckoutForm({
             })();
           }}
         >
-          {t('checkout.placeOrder')} · {formatPrice(cashToPay)}
+          {t('checkout.placeOrder')} · {formatPrice(subtotal)}
         </Button>
       </div>
     </div>
@@ -519,11 +362,7 @@ export function CheckoutPage() {
   const cartItems = useAppSelector((s) => s.cart.items);
   const { isTelegramAuthPending, telegramSignInError } = useTelegramSession();
   const tgSdkUser = useSignal(initDataUser);
-
-  const { data: me, isLoading: meLoading } = useParfumMeQuery({
-    skip: !token,
-  });
-
+  const { data: me, isLoading: meLoading } = useParfumMeQuery({ skip: !token });
   const checkoutProfile = useMemo(
     () => mergeCheckoutProfile(me, authUser, tgSdkUser ?? undefined),
     [me, authUser, tgSdkUser],
@@ -541,10 +380,7 @@ export function CheckoutPage() {
       <div className="tma-page">
         <h1 className="page-title">{t('checkout.title')}</h1>
         {telegramSignInError ? (
-          <p
-            className="page-placeholder"
-            style={{ color: 'var(--pb-danger, #b42318)', marginBottom: 12 }}
-          >
+          <p className="page-placeholder" style={{ color: 'var(--pb-danger, #b42318)', marginBottom: 12 }}>
             {telegramSignInError}
           </p>
         ) : null}
@@ -559,13 +395,7 @@ export function CheckoutPage() {
       <div className="tma-page">
         <h1 className="page-title">{t('checkout.title')}</h1>
         <p className="page-placeholder">{t('checkout.cartEmpty')}</p>
-        <Button
-          mode="filled"
-          size="m"
-          stretched
-          style={{ marginTop: 16 }}
-          onClick={() => navigate('/')}
-        >
+        <Button mode="filled" size="m" stretched style={{ marginTop: 16 }} onClick={() => navigate('/')}>
           {t('checkout.browseCatalog')}
         </Button>
       </div>
@@ -589,7 +419,5 @@ export function CheckoutPage() {
     );
   }
 
-  return (
-    <CheckoutForm key={checkoutProfile.id} me={checkoutProfile} cartItems={cartItems} />
-  );
+  return <CheckoutForm key={checkoutProfile.id} me={checkoutProfile} cartItems={cartItems} />;
 }

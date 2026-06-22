@@ -1,11 +1,9 @@
 import {
   init,
-  initData,
   isTMA,
   retrieveRawInitData,
   themeParams,
 } from '@telegram-apps/sdk';
-import { trackEvent } from '../../shared/lib/analytics';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useExchangeTelegramMutation } from '../../app/parfumApi';
 import { useAppDispatch } from '../../app/hooks';
@@ -118,21 +116,6 @@ export function UserSessionBootstrap({ children }: { children: ReactNode }) {
             user: res.user,
           }),
         );
-        try {
-          initData.restore();
-          const startParam = initData.startParam();
-          if (startParam?.startsWith('c_')) {
-            trackEvent('CAMPAIGN_LANDED', {
-              properties: { kind: 'campaign', value: startParam.slice(2) },
-            });
-          } else if (startParam?.startsWith('ref_')) {
-            trackEvent('CAMPAIGN_LANDED', {
-              properties: { kind: 'referral', value: startParam.slice(4) },
-            });
-          }
-        } catch {
-          /* start_param unavailable */
-        }
       } catch (err) {
         if (!cancelled) {
           setTelegramSignInError(exchangeErrorMessage(err));

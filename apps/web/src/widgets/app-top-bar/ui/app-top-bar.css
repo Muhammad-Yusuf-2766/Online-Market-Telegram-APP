@@ -15,12 +15,43 @@
 }
 
 .tma-top-bar__brand {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: var(--pb-text);
-  line-height: 1.2;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.tma-top-bar__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--pb-accent, #d4a853);
+  color: #fff;
+  font-weight: 800;
   flex-shrink: 0;
+}
+
+.tma-top-bar__brand-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.tma-top-bar__brand-copy strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.tma-top-bar__brand-copy span {
+  color: var(--pb-text-muted);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .tma-top-bar__actions {
@@ -30,28 +61,31 @@
   flex-shrink: 0;
 }
 
-.tma-top-bar__coins {
+.tma-top-bar__icon-btn {
+  position: relative;
   display: inline-flex;
+  width: 36px;
+  height: 36px;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--pb-border);
-  background: var(--pb-surface-2, #f4f4f5);
-  font-size: 14px;
-  font-weight: 600;
+  justify-content: center;
+  border-radius: 50%;
   color: var(--pb-text);
-  cursor: pointer;
+  background: var(--pb-surface-2, #f4f4f5);
   text-decoration: none;
-  max-width: 160px;
 }
 
-.tma-top-bar__coins:hover {
-  opacity: 0.92;
-}
-
-.tma-top-bar__coins-icon {
+.tma-top-bar__badge-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--pb-danger, #b42318);
+  color: #fff;
   font-size: 10px;
-  line-height: 1;
-  color: var(--pb-accent, #d4a853);
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
 }

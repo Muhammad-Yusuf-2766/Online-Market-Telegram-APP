@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { Product, ProductListSort } from '../../../app/parfumApi';
 import { getParfumApiBaseUrl, useGetProductsQuery } from '../../../app/parfumApi';
-import { catalogListingDisplay } from '../../../shared/lib/productSizes';
 import { formatPrice } from '../../../shared/lib/money';
 import { ProductRatingInline } from '../../../shared/ui/ProductRatingInline';
 import { trackEvent } from '../../../shared/lib/analytics';
@@ -127,9 +126,7 @@ export function SearchPage() {
       ) : (
         <>
           <div className="explore-grid">
-            {listItems.map((p) => {
-              const list = catalogListingDisplay(p.priceUzs, p.sizes);
-              return (
+            {listItems.map((p) => (
                 <Link key={p.id} to={`/product/${p.id}`} className="explore-card">
                   <div className="explore-card__media">
                     <img
@@ -141,16 +138,13 @@ export function SearchPage() {
                   <div className="explore-card__meta">
                     <span className="explore-card__title">{p.title}</span>
                     <span className="explore-card__price">
-                      {list.showFromPrefix ? (
-                        <>
-                          {t('catalog.from')}{' '}
-                          <span style={{ whiteSpace: 'nowrap' }}>
-                            {formatPrice(list.displayPrice)}
-                          </span>
-                        </>
-                      ) : (
-                        formatPrice(list.displayPrice)
-                      )}
+                      {formatPrice(p.priceKrw)}
+                      {p.measurementUnit?.symbol ? (
+                        <span style={{ color: 'var(--pb-text-muted)', fontWeight: 500 }}>
+                          {' '}
+                          / {p.measurementUnit.symbol}
+                        </span>
+                      ) : null}
                     </span>
                     <ProductRatingInline
                       ratingAvg={p.ratingAvg ?? null}
@@ -159,8 +153,7 @@ export function SearchPage() {
                     />
                   </div>
                 </Link>
-              );
-            })}
+              ))}
           </div>
           {hasMore ? (
             <div

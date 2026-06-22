@@ -19,9 +19,7 @@ export type UserOrderSocketPayload = {
 
 export type ProductStockSocketPayload = {
   productId: string;
-  /** @deprecated Piece-based inventory; prefer stockGrams for parfum. */
-  stock: number | null;
-  stockGrams: number | null;
+  stockQuantity: number;
 };
 
 const corsEnv = process.env.CORS_ORIGINS?.split(",")

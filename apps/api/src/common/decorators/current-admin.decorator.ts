@@ -1,9 +1,9 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
-import type { AdminUserWithPermissions } from "../rbac/admin-user-with-permissions";
+import type { AdminUser } from "@prisma/client";
 
 export const CurrentAdmin = createParamDecorator(
-  (_: unknown, ctx: ExecutionContext): AdminUserWithPermissions => {
-    const request = ctx.switchToHttp().getRequest<{ user: AdminUserWithPermissions }>();
+  (_: unknown, ctx: ExecutionContext): AdminUser => {
+    const request = ctx.switchToHttp().getRequest<{ user: AdminUser }>();
     return request.user;
   },
 );

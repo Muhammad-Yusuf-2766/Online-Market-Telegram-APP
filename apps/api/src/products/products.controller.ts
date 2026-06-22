@@ -10,10 +10,24 @@ export class ProductsController {
   constructor(private readonly products: ProductsService) {}
 
   @Get()
-  @ApiOperation({ summary: "List catalog products (paginated, optional search/sort)" })
+  @ApiOperation({ summary: "List Ansor Market products" })
   @ApiOkResponse({ description: "Paginated products" })
   async list(@Query() query: ProductListQueryDto): Promise<PaginatedResult<PublicProduct>> {
     return this.products.findAll(query);
+  }
+
+  @Get("sections/sale")
+  @ApiOperation({ summary: "Sale products section" })
+  @ApiOkResponse({ description: "Paginated sale products" })
+  async sale(@Query() query: ProductListQueryDto): Promise<PaginatedResult<PublicProduct>> {
+    return this.products.findSection("sale", query);
+  }
+
+  @Get("sections/bestseller")
+  @ApiOperation({ summary: "Bestselling products section" })
+  @ApiOkResponse({ description: "Paginated bestselling products" })
+  async bestseller(@Query() query: ProductListQueryDto): Promise<PaginatedResult<PublicProduct>> {
+    return this.products.findSection("bestseller", query);
   }
 
   @Get(":id")
@@ -21,26 +35,5 @@ export class ProductsController {
   @ApiOkResponse({ description: "Product" })
   async get(@Param("id") id: string): Promise<PublicProduct> {
     return this.products.findOne(id);
-  }
-
-  @Get("highlights")
-  @ApiOperation({ summary: "Bestseller/new/discounted lists" })
-  @ApiOkResponse()
-  async highlights() {
-    return this.products.highlights();
-  }
-
-  @Get(":id/similar")
-  @ApiOperation({ summary: "Similar products by taxonomy" })
-  @ApiOkResponse()
-  async similar(@Param("id") id: string) {
-    return this.products.similar(id);
-  }
-
-  @Get(":id/frequently-bought-together")
-  @ApiOperation({ summary: "Frequently bought together products" })
-  @ApiOkResponse()
-  async frequentlyBoughtTogether(@Param("id") id: string) {
-    return this.products.frequentlyBoughtTogether(id);
   }
 }

@@ -1,27 +1,46 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAdminGuard } from "../admin-auth/guards/jwt-admin.guard";
-import { PERMISSIONS } from "../common/rbac/permissions.constants";
-import { PermissionsGuard } from "../common/rbac/permissions.guard";
-import { RequirePermissions } from "../common/rbac/require-permissions.decorator";
 import { CategoriesService } from "./categories.service";
 
 @ApiTags("categories")
-@Controller("categories")
+@Controller()
 export class CategoriesController {
   constructor(private readonly categories: CategoriesService) {}
 
-  @Get()
+  @Get("categories")
   list() {
     return this.categories.list();
   }
 
-  @Post("admin")
+  @Get("admin/categories")
   @ApiBearerAuth("admin-jwt")
-  @UseGuards(JwtAdminGuard, PermissionsGuard)
-  @RequirePermissions(PERMISSIONS.categories.manage)
+  @UseGuards(JwtAdminGuard)
+  listAdmin() {
+    return this.categories.list();
+  }
+
+  @Post("admin/categories")
+  @ApiBearerAuth("admin-jwt")
+  @UseGuards(JwtAdminGuard)
   create(@Body() body: { slug: string; name: string; parentId?: string; sortOrder?: number }) {
     return this.categories.create(body);
   }
-}
 
+  @Patch("admin/categories/:id")
+  @ApiBearerAuth("admin-jwt")
+  @UseGuards(JwtAdminGuard)
+  update(
+    @Param("id") id: string,
+    @Body() body: Partial<{ slug: string; name: string; parentId: string | null; sortOrder: number }>,
+  ) {
+    return this.categories.update(id, body);
+  }
+
+  @Delete("admin/categories/:id")
+  @ApiBearerAuth("admin-jwt")
+  @UseGuards(JwtAdminGuard)
+  remove(@Param("id") id: string) {
+    return this.categories.remove(id);
+  }
+}

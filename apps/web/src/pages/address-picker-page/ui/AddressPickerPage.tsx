@@ -1,257 +1,132 @@
-import { Button, Input } from '@telegram-apps/telegram-ui';
-import { isCancelledError, locationManager } from '@telegram-apps/sdk';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Input, Spinner } from '@telegram-apps/telegram-ui';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckoutShippingMap } from '../../checkout-page/ui/CheckoutShippingMap';
-import type { CheckoutFormDraft } from '../../checkout-page/checkoutFlow.types';
-
-type NominatimSearchItem = {
-  lat: string;
-  lon: string;
-  display_name: string;
-};
-
-type AddressDraft = {
-  lat: number | null;
-  lng: number | null;
-  label: string;
-};
+import {
+  type AddressSearchResult,
+  type UserAddress,
+  useCreateUserAddressMutation,
+  useGetUserAddressesQuery,
+  useLazySearchAddressesQuery,
+} from '../../../app/parfumApi';
+import type {
+  CheckoutAddressSelection,
+  CheckoutFormDraft,
+} from '../../checkout-page/checkoutFlow.types';
 
 type AddressPickerLocationState = {
-  checkoutAddressDraft?: AddressDraft;
+  checkoutAddressSelection?: CheckoutAddressSelection;
   checkoutFormDraft?: CheckoutFormDraft;
 };
 
-const ADDRESS_DRAFT_KEY = 'pb.checkout.addressDraft';
+function selectionFromSaved(address: UserAddress): CheckoutAddressSelection {
+  return {
+    addressId: address.id,
+    addressName: address.addressName,
+    roadAddressName: address.roadAddressName,
+    jibunAddressName: address.jibunAddressName,
+    buildingName: address.buildingName,
+    zoneNo: address.zoneNo,
+    detailAddress: address.detailAddress,
+    latitude: address.latitude,
+    longitude: address.longitude,
+  };
+}
 
-function parseDraft(raw: string | null): AddressDraft | null {
-  if (!raw) return null;
-  try {
-    const value = JSON.parse(raw) as AddressDraft;
-    if (
-      typeof value !== 'object' ||
-      value === null ||
-      typeof value.label !== 'string'
-    ) {
-      return null;
-    }
-    const lat = value.lat;
-    const lng = value.lng;
-    if (
-      lat !== null &&
-      (typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90)
-    ) {
-      return null;
-    }
-    if (
-      lng !== null &&
-      (typeof lng !== 'number' || !Number.isFinite(lng) || lng < -180 || lng > 180)
-    ) {
-      return null;
-    }
-    return { lat, lng, label: value.label };
-  } catch {
-    return null;
-  }
+function selectionFromSearch(
+  result: AddressSearchResult,
+  detailAddress: string,
+): CheckoutAddressSelection {
+  return {
+    addressName: result.addressName,
+    roadAddressName: result.roadAddressName,
+    jibunAddressName: result.jibunAddressName,
+    buildingName: result.buildingName,
+    zoneNo: result.zoneNo,
+    detailAddress,
+    latitude: result.latitude,
+    longitude: result.longitude,
+  };
+}
+
+function displayAddress(address: CheckoutAddressSelection | AddressSearchResult): string {
+  return (
+    address.roadAddressName ||
+    address.addressName ||
+    address.jibunAddressName ||
+    ''
+  );
 }
 
 export function AddressPickerPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const initialDraft = useMemo(() => {
-    const state = (location.state ?? {}) as AddressPickerLocationState;
-    const fromState = state.checkoutAddressDraft;
-    if (fromState) return fromState;
-    const fromStorage = parseDraft(sessionStorage.getItem(ADDRESS_DRAFT_KEY));
-    return fromStorage ?? { lat: null, lng: null, label: '' };
-  }, [location.state]);
-
-  const [shipLat, setShipLat] = useState<number | null>(initialDraft.lat);
-  const [shipLng, setShipLng] = useState<number | null>(initialDraft.lng);
-  const [query, setQuery] = useState(initialDraft.label);
-  const [results, setResults] = useState<NominatimSearchItem[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchTouched, setSearchTouched] = useState(false);
-  const [pickingLocation, setPickingLocation] = useState(false);
-  const [externalMapNonce, setExternalMapNonce] = useState(0);
-  const skipSearchOnceRef = useRef(false);
-  const canUseTelegramLocation =
-    locationManager.mount.isAvailable() &&
-    locationManager.requestLocation.isAvailable();
+  const navState = useMemo(
+    () => (location.state ?? {}) as AddressPickerLocationState,
+    [location.state],
+  );
+  const { data: savedAddresses, isLoading: savedLoading } =
+    useGetUserAddressesQuery();
+  const [searchAddresses, { data: results = [], isFetching, error }] =
+    useLazySearchAddressesQuery();
+  const [createAddress, { isLoading: saving }] = useCreateUserAddressMutation();
+  const [query, setQuery] = useState('');
+  const [detailAddress, setDetailAddress] = useState(
+    navState.checkoutAddressSelection?.detailAddress ?? '',
+  );
+  const [selected, setSelected] = useState<AddressSearchResult | null>(null);
+  const [saveAddress, setSaveAddress] = useState(true);
+  const [uiError, setUiError] = useState<string | null>(null);
 
   useEffect(() => {
-    const draft: AddressDraft = {
-      lat: shipLat,
-      lng: shipLng,
-      label: query,
-    };
-    sessionStorage.setItem(ADDRESS_DRAFT_KEY, JSON.stringify(draft));
-  }, [shipLat, shipLng, query]);
-
-  useEffect(() => {
-    if (skipSearchOnceRef.current) {
-      skipSearchOnceRef.current = false;
-      return;
-    }
     const q = query.trim();
-    if (q.length < 3) {
-      setResults([]);
-      setSearchError(null);
-      setSearching(false);
-      return;
-    }
-    const ctrl = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setSearching(true);
-      setSearchError(null);
-      try {
-        const url =
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=0&limit=5` +
-          `&accept-language=uz&q=${encodeURIComponent(q)}`;
-        const res = await fetch(url, {
-          signal: ctrl.signal,
-          headers: { Accept: 'application/json' },
-        });
-        if (!res.ok) {
-          throw new Error(`Nominatim status ${res.status}`);
-        }
-        const data = (await res.json()) as unknown;
-        const items = Array.isArray(data)
-          ? (data as NominatimSearchItem[]).filter(
-              (x) => !!x?.lat && !!x?.lon && !!x?.display_name,
-            )
-          : [];
-        setResults(items);
-        setSearchTouched(true);
-      } catch (e) {
-        if (e instanceof DOMException && e.name === 'AbortError') return;
-        setSearchError(t('addressPicker.searchError'));
-        setResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 400);
+    if (q.length < 2) return;
+    const timer = window.setTimeout(() => {
+      void searchAddresses(q);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [query, searchAddresses]);
 
-    return () => {
-      window.clearTimeout(timer);
-      ctrl.abort();
-    };
-  }, [query, t]);
-
-  async function syncLabelFromCoordinates(lat: number, lng: number) {
-    try {
-      const url =
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2` +
-        `&accept-language=uz` +
-        `&lat=${encodeURIComponent(String(lat))}` +
-        `&lon=${encodeURIComponent(String(lng))}`;
-      const res = await fetch(url, {
-        headers: { Accept: 'application/json' },
-      });
-      if (!res.ok) return;
-      const data = (await res.json()) as unknown;
-      const displayName =
-        data && typeof data === 'object' && 'display_name' in data
-          ? (data as { display_name?: unknown }).display_name
-          : null;
-      if (typeof displayName !== 'string' || !displayName.trim()) return;
-      skipSearchOnceRef.current = true;
-      setQuery(displayName);
-      setResults([]);
-      setSearchTouched(false);
-    } catch {
-      // Keep coordinates even if reverse geocoding fails.
-    }
-  }
-
-  function setCoordinates(lat: number, lng: number, recenterMap: boolean) {
-    setShipLat(lat);
-    setShipLng(lng);
-    setSearchError(null);
-    if (recenterMap) {
-      setExternalMapNonce((n) => n + 1);
-    }
-    void syncLabelFromCoordinates(lat, lng);
-  }
-
-  async function pickOnTelegramMap() {
-    setPickingLocation(true);
-    try {
-      await locationManager.mount();
-      const raw = await locationManager.requestLocation();
-      if (!raw || typeof raw !== 'object') {
-        setSearchError(t('checkout.shippingFailed'));
-        return;
-      }
-      const o = raw as Record<string, unknown>;
-      const lat =
-        typeof o.latitude === 'number'
-          ? o.latitude
-          : typeof o.lat === 'number'
-            ? o.lat
-            : null;
-      const lng =
-        typeof o.longitude === 'number'
-          ? o.longitude
-          : typeof o.lng === 'number'
-            ? o.lng
-            : null;
-      if (lat == null || lng == null) {
-        setSearchError(t('checkout.shippingFailed'));
-        return;
-      }
-      setCoordinates(lat, lng, true);
-    } catch (e) {
-      if (isCancelledError(e)) {
-        setSearchError(t('checkout.shippingCancelled'));
-      } else {
-        setSearchError(t('checkout.shippingFailed'));
-      }
-    } finally {
-      setPickingLocation(false);
-    }
-  }
-
-  function pickViaGps() {
-    if (!navigator.geolocation) {
-      setSearchError(t('checkout.gpsUnavailable'));
-      return;
-    }
-    setPickingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoordinates(pos.coords.latitude, pos.coords.longitude, true);
-        setPickingLocation(false);
-      },
-      () => {
-        setSearchError(t('checkout.gpsDenied'));
-        setPickingLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 60_000 },
-    );
-  }
-
-  function confirmAddress() {
-    if (shipLat == null || shipLng == null) return;
-    const label = query.trim();
-    sessionStorage.removeItem(ADDRESS_DRAFT_KEY);
-    const navState = (location.state ?? {}) as AddressPickerLocationState;
+  function confirm(selection: CheckoutAddressSelection) {
     navigate('/checkout', {
       replace: true,
       state: {
-        checkoutAddressSelection: {
-          lat: shipLat,
-          lng: shipLng,
-          label,
-        },
+        checkoutAddressSelection: selection,
         ...(navState.checkoutFormDraft
           ? { checkoutFormDraft: navState.checkoutFormDraft }
           : {}),
       },
     });
+  }
+
+  async function confirmSearchResult() {
+    if (!selected || !detailAddress.trim()) return;
+    setUiError(null);
+    const payload = selectionFromSearch(selected, detailAddress.trim());
+    try {
+      if (saveAddress) {
+        const saved = await createAddress({
+          label: null,
+          recipientName: null,
+          phone: null,
+          addressName: payload.addressName,
+          roadAddressName: payload.roadAddressName ?? null,
+          jibunAddressName: payload.jibunAddressName ?? null,
+          buildingName: payload.buildingName ?? null,
+          zoneNo: payload.zoneNo ?? null,
+          detailAddress: payload.detailAddress,
+          latitude: payload.latitude ?? null,
+          longitude: payload.longitude ?? null,
+          isDefault: false,
+        }).unwrap();
+        confirm(selectionFromSaved(saved));
+        return;
+      }
+      confirm(payload);
+    } catch (e) {
+      setUiError(t('addressPicker.saveError'));
+    }
   }
 
   return (
@@ -261,6 +136,30 @@ export function AddressPickerPage() {
         <p className="page-placeholder" style={{ marginBottom: 10 }}>
           {t('addressPicker.hint')}
         </p>
+
+        {savedLoading ? (
+          <div className="tma-page--centered" style={{ padding: 12 }}>
+            <Spinner size="m" />
+          </div>
+        ) : (savedAddresses?.length ?? 0) > 0 ? (
+          <div className="checkout-location-search-results" style={{ marginBottom: 14 }}>
+            {savedAddresses?.map((address) => (
+              <button
+                key={address.id}
+                type="button"
+                className="checkout-location-search-results__item"
+                onClick={() => confirm(selectionFromSaved(address))}
+              >
+                <strong>{address.label || displayAddress(address)}</strong>
+                <span>
+                  {displayAddress(address)}
+                  {address.detailAddress ? `, ${address.detailAddress}` : ''}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <Input
           id="co-address-search"
           header={t('addressPicker.search')}
@@ -268,93 +167,62 @@ export function AddressPickerPage() {
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
-            setSearchTouched(false);
+            setSelected(null);
+            setUiError(null);
           }}
           autoComplete="off"
         />
-        {searching ? (
+        {isFetching ? (
           <p className="page-placeholder address-picker-page__status">
             {t('addressPicker.searching')}
           </p>
         ) : null}
-        {searchError ? (
+        {error || uiError ? (
           <p className="page-placeholder address-picker-page__status address-picker-page__status--error">
-            {searchError}
+            {uiError ?? t('addressPicker.searchError')}
           </p>
         ) : null}
         {results.length > 0 ? (
           <div className="checkout-location-search-results">
             {results.map((item, idx) => (
               <button
-                key={`${item.lat}:${item.lon}:${idx}`}
+                key={`${item.addressName}:${idx}`}
                 type="button"
                 className="checkout-location-search-results__item"
                 onClick={() => {
-                  const lat = Number(item.lat);
-                  const lng = Number(item.lon);
-                  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-                  setShipLat(lat);
-                  setShipLng(lng);
-                  skipSearchOnceRef.current = true;
-                  setQuery(item.display_name);
-                  setResults([]);
-                  setSearchTouched(true);
-                  setExternalMapNonce((n) => n + 1);
+                  setSelected(item);
+                  setQuery(displayAddress(item));
                 }}
               >
-                {item.display_name}
+                <strong>{displayAddress(item)}</strong>
+                {item.jibunAddressName ? <span>{item.jibunAddressName}</span> : null}
+                {item.zoneNo ? <span>{item.zoneNo}</span> : null}
               </button>
             ))}
           </div>
         ) : null}
-        {!searching &&
-        !searchError &&
-        searchTouched &&
-        query.trim().length >= 3 &&
-        results.length === 0 ? (
-          <p className="page-placeholder address-picker-page__status">
-            {t('addressPicker.noResults')}
-          </p>
-        ) : null}
-        <div className="address-picker-page__quick-actions">
-          {canUseTelegramLocation ? (
-            <Button
-              mode="outline"
-              size="m"
-              stretched
-              loading={pickingLocation}
-              disabled={pickingLocation}
-              onClick={() => void pickOnTelegramMap()}
-            >
-              {t('checkout.pickViaTelegram')}
-            </Button>
-          ) : null}
-          {'geolocation' in navigator ? (
-            <Button
-              mode="white"
-              size="m"
-              stretched
-              loading={pickingLocation}
-              disabled={pickingLocation}
-              onClick={() => pickViaGps()}
-            >
-              {t('checkout.useDeviceGps')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
 
-      <div className="address-picker-page__map-wrap">
-        <CheckoutShippingMap
-          latitude={shipLat}
-          longitude={shipLng}
-          externalViewNonce={externalMapNonce}
-          mapHeight="100%"
-          className="address-picker-page__map"
-          onChange={(lat, lng) => {
-            setCoordinates(lat, lng, false);
-          }}
-        />
+        {selected ? (
+          <div className="form-stack" style={{ marginTop: 14 }}>
+            <Input
+              id="co-address-detail"
+              header={t('addressPicker.detailAddress')}
+              placeholder={t('addressPicker.detailPlaceholder')}
+              value={detailAddress}
+              onChange={(e) => setDetailAddress(e.target.value)}
+              autoComplete="street-address"
+            />
+            <label className="page-placeholder" style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={saveAddress}
+                disabled={(savedAddresses?.length ?? 0) >= 3}
+                onChange={(e) => setSaveAddress(e.target.checked)}
+              />
+              <span>{t('addressPicker.saveAddress')}</span>
+            </label>
+          </div>
+        ) : null}
       </div>
 
       <div className="address-picker-page__confirm">
@@ -362,8 +230,9 @@ export function AddressPickerPage() {
           mode="filled"
           size="l"
           stretched
-          disabled={shipLat == null || shipLng == null}
-          onClick={() => confirmAddress()}
+          loading={saving}
+          disabled={!selected || !detailAddress.trim()}
+          onClick={() => void confirmSearchResult()}
         >
           {t('addressPicker.confirm')}
         </Button>

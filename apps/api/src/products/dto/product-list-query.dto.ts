@@ -1,14 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import {
-  IsBoolean,
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  MaxLength,
-  Min,
-} from "class-validator";
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from "class-validator";
 import { PaginationQueryDto } from "../../common/dto/pagination-query.dto";
 
 function toBool(value: unknown): boolean | undefined {
@@ -34,7 +26,7 @@ export enum ProductListSort {
 }
 
 export class ProductListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ description: "Search title or description (case-insensitive)" })
+  @ApiPropertyOptional({ description: "Search title or description" })
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -50,44 +42,19 @@ export class ProductListQueryDto extends PaginationQueryDto {
   @IsString()
   categorySlug?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  brandSlug?: string;
-
-  @ApiPropertyOptional({ enum: ["MEN", "WOMEN", "UNISEX"] })
-  @IsOptional()
-  @IsString()
-  gender?: "MEN" | "WOMEN" | "UNISEX";
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  familySlug?: string;
-
-  @ApiPropertyOptional({ description: "Comma-separated brand ids" })
-  @IsOptional()
-  @IsString()
-  brandIds?: string;
-
   @ApiPropertyOptional({ description: "Comma-separated category ids" })
   @IsOptional()
   @IsString()
   categoryIds?: string;
 
-  @ApiPropertyOptional({ description: "Comma-separated family ids" })
-  @IsOptional()
-  @IsString()
-  familyIds?: string;
-
-  @ApiPropertyOptional({ description: "Minimum price (UZS)" })
+  @ApiPropertyOptional({ description: "Minimum KRW price" })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
   priceMin?: number;
 
-  @ApiPropertyOptional({ description: "Maximum price (UZS)" })
+  @ApiPropertyOptional({ description: "Maximum KRW price" })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -104,17 +71,17 @@ export class ProductListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @Transform(({ value }) => toBool(value))
   @IsBoolean()
-  newArrival?: boolean;
+  onSale?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) => toBool(value))
   @IsBoolean()
-  discounted?: boolean;
+  inStockOnly?: boolean;
 
-  @ApiPropertyOptional({ description: "Only products with stock > 0 (pieces or grams)" })
+  @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) => toBool(value))
   @IsBoolean()
-  inStockOnly?: boolean;
+  includeInactive?: boolean;
 }

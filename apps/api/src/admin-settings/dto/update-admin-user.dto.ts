@@ -20,11 +20,6 @@ export class UpdateAdminUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
-  roleId?: string | null;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }

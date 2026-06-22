@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import type { Product } from '../../app/parfumApi';
 import { WishlistHeartButton } from '../../features/wishlist/WishlistHeartButton';
 import { resolveProductDiscount } from '../lib/productDiscount';
-import { catalogListingDisplay } from '../lib/productSizes';
 import { formatPrice } from '../lib/money';
 import { ProductRatingInline } from './ProductRatingInline';
 
@@ -16,8 +15,8 @@ function productImageUrl(id: string, images: string[] | undefined): string {
 
 export function ProductGridTile({ product }: { product: Product }) {
   const { t } = useTranslation();
-  const list = catalogListingDisplay(product.priceUzs, product.sizes);
   const discount = resolveProductDiscount(product);
+  const unitLabel = product.measurementUnit?.symbol;
 
   return (
     <Link to={`/product/${product.id}`} className="explore-card">
@@ -38,16 +37,13 @@ export function ProductGridTile({ product }: { product: Product }) {
         <span className="explore-card__title">{product.title}</span>
         <span className="explore-card__price-row">
           <span className="explore-card__price">
-            {list.showFromPrefix ? (
-              <>
-                {t('catalog.from')}{' '}
-                <span style={{ whiteSpace: 'nowrap' }}>
-                  {formatPrice(list.displayPrice)}
-                </span>
-              </>
-            ) : (
-              formatPrice(list.displayPrice)
-            )}
+            {formatPrice(product.priceKrw)}
+            {unitLabel ? (
+              <span style={{ color: 'var(--pb-text-muted)', fontWeight: 500 }}>
+                {' '}
+                / {unitLabel}
+              </span>
+            ) : null}
           </span>
           {discount ? (
             <span className="explore-card__old-price">

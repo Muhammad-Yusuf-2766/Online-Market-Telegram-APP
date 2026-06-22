@@ -1,10 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
-  ArrayMinSize,
   IsArray,
-  IsDateString,
-  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -18,12 +15,18 @@ import {
 import { OrderLineDto } from "./order-line.dto";
 
 export class CreateOrderDto {
-  @ApiProperty({ type: [OrderLineDto] })
+  @ApiPropertyOptional({ type: [OrderLineDto], description: "Optional fallback; checkout normally uses cart items." })
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => OrderLineDto)
-  items!: OrderLineDto[];
+  items?: OrderLineDto[];
+
+  @ApiPropertyOptional({ description: "Saved address id to snapshot into the order" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  addressId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -44,34 +47,53 @@ export class CreateOrderDto {
   @MaxLength(120)
   deliveryLastName?: string;
 
-  @ApiPropertyOptional({ description: "Also updates profile when provided (ISO date)" })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsDateString()
-  birthDate?: string;
+  @IsString()
+  @MaxLength(255)
+  addressName?: string;
 
-  @ApiPropertyOptional({ description: "Shipping latitude (WGS84), from Telegram location / map picker" })
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  roadAddressName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  jibunAddressName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  buildingName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  zoneNo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  detailAddress?: string;
+
+  @ApiPropertyOptional()
   @ValidateIf((_, v) => v !== undefined && v !== null)
   @IsNumber()
   @Min(-90)
   @Max(90)
-  deliveryLatitude?: number;
+  latitude?: number;
 
-  @ApiPropertyOptional({ description: "Shipping longitude (WGS84), from Telegram location / map picker" })
+  @ApiPropertyOptional()
   @ValidateIf((_, v) => v !== undefined && v !== null)
   @IsNumber()
   @Min(-180)
   @Max(180)
-  deliveryLongitude?: number;
-
-  @ApiPropertyOptional({ description: "How many coins (1 coin = 1 UZS) to apply toward this order" })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  coinsToSpendUzs?: number;
-
-  @ApiPropertyOptional({ description: "Optional promo code" })
-  @IsOptional()
-  @IsString()
-  @MaxLength(40)
-  promoCode?: string;
+  longitude?: number;
 }

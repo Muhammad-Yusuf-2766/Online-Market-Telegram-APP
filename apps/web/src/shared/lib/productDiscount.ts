@@ -1,8 +1,3 @@
-import {
-  catalogListingDisplay,
-  type ProductSizeOption,
-} from './productSizes';
-
 export type ProductDiscountDisplay = {
   currentPrice: number;
   oldPrice: number;
@@ -10,10 +5,9 @@ export type ProductDiscountDisplay = {
 };
 
 type ProductDiscountFields = {
-  priceUzs: number;
-  oldPriceUzs?: number | null;
+  priceKrw: number;
+  oldPriceKrw?: number | null;
   discountPercent?: number | null;
-  sizes?: ProductSizeOption[] | null;
 };
 
 /**
@@ -24,13 +18,9 @@ export function resolveProductDiscount(
   product: ProductDiscountFields,
   currentPriceOverride?: number,
 ): ProductDiscountDisplay | null {
-  const { displayPrice } = catalogListingDisplay(
-    product.priceUzs,
-    product.sizes,
-  );
-  const currentPrice = currentPriceOverride ?? displayPrice;
+  const currentPrice = currentPriceOverride ?? product.priceKrw;
   const storedPercent = Math.max(0, Math.floor(product.discountPercent ?? 0));
-  let oldPrice = product.oldPriceUzs ?? null;
+  let oldPrice = product.oldPriceKrw ?? null;
 
   if (storedPercent > 0 && storedPercent < 100) {
     const derivedOld = Math.round(currentPrice / (1 - storedPercent / 100));

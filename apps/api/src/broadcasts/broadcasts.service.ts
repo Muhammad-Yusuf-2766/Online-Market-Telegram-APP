@@ -1,19 +1,17 @@
 import { Injectable } from "@nestjs/common";
 import type { PaginationQueryDto } from "../common/dto/pagination-query.dto";
-import { paginationParams, toPaginatedResult, type PaginatedResult } from "../common/pagination";
-import { PrismaService } from "../prisma/prisma.service";
-import { SegmentsService } from "../segments/segments.service";
-import { TelegramNotifyService } from "../telegram/telegram-notify.service";
+import { paginationParams, toPaginatedResult } from "../common/pagination";
 import { UserNotificationsService } from "../notifications/user-notifications.service";
+import { PrismaService } from "../prisma/prisma.service";
+import { TelegramNotifyService } from "../telegram/telegram-notify.service";
 
-const MEMBERS_PAGE = 250;
+const USERS_PAGE = 250;
 
 @Injectable()
 export class BroadcastsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly telegram: TelegramNotifyService,
-    private readonly segments: SegmentsService,
     private readonly userNotifications: UserNotificationsService,
   ) {}
 
@@ -25,9 +23,6 @@ export class BroadcastsService {
         orderBy: { createdAt: "desc" },
         skip,
         take: pageSize,
-        include: {
-          segment: { select: { name: true, userCountCached: true } },
-        },
       }),
     ]);
     return toPaginatedResult(items, total, page, pageSize);
@@ -35,25 +30,16 @@ export class BroadcastsService {
 
   create(body: {
     title: string;
-    bodyUz: string;
-    bodyRu: string;
-    segmentId: string;
+    body: string;
     imageUrl?: string;
-    coinGiftAmount?: number;
-    promoCodeId?: string;
-    scheduledFor?: string;
+    targetUrl?: string;
   }) {
     return this.prisma.broadcast.create({
       data: {
         title: body.title,
-        bodyUz: body.bodyUz,
-        bodyRu: body.bodyRu,
-        segmentId: body.segmentId,
+        body: body.body,
         imageUrl: body.imageUrl ?? null,
-        coinGiftAmount: body.coinGiftAmount ?? null,
-        promoCodeId: body.promoCodeId ?? null,
-        scheduledFor: body.scheduledFor ? new Date(body.scheduledFor) : null,
-        status: body.scheduledFor ? "SCHEDULED" : "DRAFT",
+        targetUrl: body.targetUrl ?? null,
       },
     });
   }
@@ -61,61 +47,66 @@ export class BroadcastsService {
   async sendNow(id: string) {
     const broadcast = await this.prisma.broadcast.findUniqueOrThrow({
       where: { id },
-      select: {
-        id: true,
-        title: true,
-        segmentId: true,
-        bodyUz: true,
-        bodyRu: true,
-        imageUrl: true,
-      },
     });
 
-    await this.segments.syncMembersFromDefinition(broadcast.segmentId);
+    await this.prisma.broadcast.update({
+      where: { id },
+      data: { status: "SENDING", errorCount: 0 },
+    });
 
     let sent = 0;
+    let errors = 0;
     let cursor: { id: string } | undefined;
 
     for (;;) {
-      const batch = await this.prisma.userSegmentMembership.findMany({
-        where: { segmentId: broadcast.segmentId },
-        take: MEMBERS_PAGE,
+      const users = await this.prisma.user.findMany({
+        where: { isActive: true },
+        take: USERS_PAGE,
         orderBy: { id: "asc" },
         ...(cursor ? { skip: 1, cursor } : {}),
-        include: { user: true },
       });
+      if (users.length === 0) break;
 
-      if (batch.length === 0) {
-        break;
-      }
-
-      for (const member of batch) {
-        const text = member.user.locale === "ru" ? broadcast.bodyRu : broadcast.bodyUz;
-        await this.telegram.sendPlainText(member.user.telegramId, text);
-        sent += 1;
-        await this.prisma.broadcastLog.create({
-          data: { broadcastId: broadcast.id, userId: member.user.id, status: "SENT" },
-        });
-        void this.userNotifications
-          .create({
-            userId: member.user.id,
+      for (const user of users) {
+        try {
+          await this.telegram.sendPlainText(user.telegramId, broadcast.body);
+          await this.prisma.broadcastLog.create({
+            data: { broadcastId: broadcast.id, userId: user.id, status: "SENT" },
+          });
+          await this.userNotifications.create({
+            userId: user.id,
             kind: "BROADCAST",
             title: broadcast.title,
-            body: text,
+            body: broadcast.body,
             imageUrl: broadcast.imageUrl,
+            targetUrl: broadcast.targetUrl,
             metadata: { broadcastId: broadcast.id },
-          })
-          .catch(() => undefined);
+          });
+          sent += 1;
+        } catch (error) {
+          errors += 1;
+          await this.prisma.broadcastLog.create({
+            data: {
+              broadcastId: broadcast.id,
+              userId: user.id,
+              status: "FAILED",
+              error: error instanceof Error ? error.message : String(error),
+            },
+          });
+        }
       }
 
-      cursor = { id: batch[batch.length - 1]!.id };
+      cursor = { id: users[users.length - 1]!.id };
     }
 
     await this.prisma.broadcast.update({
       where: { id },
-      data: { status: "SENT", sentCount: sent, errorCount: 0 },
+      data: {
+        status: errors > 0 ? "FAILED" : "SENT",
+        sentCount: sent,
+        errorCount: errors,
+      },
     });
-    return { sent };
+    return { sent, errors };
   }
 }
-

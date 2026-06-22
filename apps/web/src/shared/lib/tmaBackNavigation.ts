@@ -4,8 +4,8 @@ import type { NavigateFunction } from 'react-router-dom';
 export function shouldShowTmaBack(pathname: string): boolean {
   if (pathname.startsWith('/product/')) return true;
   if (pathname === '/checkout') return true;
-  if (pathname === '/coins') return true;
   if (pathname === '/search') return true;
+  if (pathname === '/notifications') return true;
   if (pathname.startsWith('/orders/')) {
     const rest = pathname.slice('/orders/'.length).replace(/\/$/, '');
     return rest.length > 0;
@@ -25,7 +25,7 @@ export function navigateTmaBack(navigate: NavigateFunction, pathname: string): v
     navigate('/cart');
     return;
   }
-  if (pathname === '/coins') {
+  if (pathname === '/notifications') {
     navigate('/');
     return;
   }

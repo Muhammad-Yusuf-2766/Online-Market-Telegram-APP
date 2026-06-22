@@ -43,8 +43,8 @@ export class OrderEventsService {
 
   async notifyProductStockChanged(
     productId: string,
-    payload: { stock: number | null; stockGrams: number | null },
+    payload: { stockQuantity: number },
   ): Promise<void> {
-    this.userGateway.emitProductStock({ productId, stock: payload.stock, stockGrams: payload.stockGrams });
+    this.userGateway.emitProductStock({ productId, stockQuantity: payload.stockQuantity });
   }
 }

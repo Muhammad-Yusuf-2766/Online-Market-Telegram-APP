@@ -13,7 +13,7 @@ function toDigest(lines: CartLine[]): string {
       .map((line) => ({
         k: line.lineKey,
         p: line.productId,
-        s: line.sizeId,
+        s: line.unitId,
         q: line.quantity,
       }))
       .sort((a, b) => a.k.localeCompare(b.k)),
@@ -42,12 +42,12 @@ export function CartSyncBridge() {
     hasHydratedRemoteRef.current = true;
     if (localItems.length === 0 && remoteCart.items.length > 0) {
       const lines: CartLine[] = remoteCart.items.map((item) => ({
-        lineKey: `${item.productId}::${item.sizeSlug ?? 'default'}`,
+        lineKey: `${item.productId}::default`,
         productId: item.productId,
-        sizeId: item.sizeSlug ?? 'default',
+        unitId: item.product.measurementUnit?.id ?? 'default',
         title: item.product.title,
-        sizeLabel: item.sizeSlug ?? null,
-        unitPriceUzs: item.product.priceUzs,
+        unitLabel: item.product.measurementUnit?.symbol ?? null,
+        unitPriceKrw: item.product.priceKrw,
         imageUrl: item.product.images[0] ?? null,
         quantity: item.qty,
       }));
@@ -72,7 +72,6 @@ export function CartSyncBridge() {
       for (const local of localItems) {
         await upsertCartItem({
           productId: local.productId,
-          sizeSlug: local.sizeId === 'default' ? undefined : local.sizeId,
           qty: local.quantity,
         }).unwrap();
       }

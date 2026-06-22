@@ -19,5 +19,21 @@ export class CategoriesService {
       },
     });
   }
-}
 
+  update(id: string, body: Partial<{ slug: string; name: string; parentId: string | null; sortOrder: number }>) {
+    return this.prisma.category.update({
+      where: { id },
+      data: {
+        ...(body.slug !== undefined ? { slug: body.slug.trim().toLowerCase() } : {}),
+        ...(body.name !== undefined ? { name: body.name.trim() } : {}),
+        ...(body.parentId !== undefined ? { parentId: body.parentId } : {}),
+        ...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}),
+      },
+    });
+  }
+
+  async remove(id: string) {
+    await this.prisma.category.delete({ where: { id } });
+    return { ok: true as const };
+  }
+}

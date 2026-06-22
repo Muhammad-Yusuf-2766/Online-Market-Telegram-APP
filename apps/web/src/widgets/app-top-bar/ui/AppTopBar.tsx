@@ -1,14 +1,11 @@
 import { Link } from 'react-router-dom';
-import { useParfumMeQuery } from '../../../app/useParfumMeQuery';
 import { useAppSelector } from '../../../app/hooks';
 import { useGetMyNotificationsQuery } from '../../../app/parfumApi';
-import { formatPrice } from '../../../shared/lib/money';
 
 import './app-top-bar.css';
 
 export function AppTopBar() {
   const token = useAppSelector((s) => s.auth.accessToken);
-  const { data: me } = useParfumMeQuery({ skip: !token });
   const { data: notifications } = useGetMyNotificationsQuery(
     { page: 1, pageSize: 1 },
     { skip: !token, pollingInterval: 30000 },
@@ -17,35 +14,32 @@ export function AppTopBar() {
 
   return (
     <header className="tma-top-bar">
-      {token && me ? (
-        <>
-          <Link to="/coins" className="tma-top-bar__coins" aria-label="Coins">
-            <span className="tma-top-bar__coins-icon" aria-hidden>
-              ●
+      <Link to="/" className="tma-top-bar__brand" aria-label="Ansor Market">
+        <span className="tma-top-bar__logo" aria-hidden>
+          A
+        </span>
+        <span className="tma-top-bar__brand-copy">
+          <strong>Ansor Market</strong>
+          <span>Koreadagi halal mahsulotlar</span>
+        </span>
+      </Link>
+      <div className="tma-top-bar__actions">
+        <Link to="/wishlist" className="tma-top-bar__icon-btn" aria-label="Wishlist">
+          <HeartIcon />
+        </Link>
+        <Link
+          to="/notifications"
+          className="tma-top-bar__icon-btn"
+          aria-label="Notifications"
+        >
+          <BellIcon />
+          {token && unread > 0 ? (
+            <span className="tma-top-bar__badge-dot">
+              {unread > 99 ? '99+' : unread}
             </span>
-            <span>{formatPrice(me.coinBalance)}</span>
-          </Link>
-          <div className="tma-top-bar__actions">
-            <Link to="/wishlist" className="tma-top-bar__icon-btn" aria-label="Wishlist">
-              <HeartIcon />
-            </Link>
-            <Link
-              to="/notifications"
-              className="tma-top-bar__icon-btn"
-              aria-label="Notifications"
-            >
-              <BellIcon />
-              {unread > 0 ? (
-                <span className="tma-top-bar__badge-dot">
-                  {unread > 99 ? '99+' : unread}
-                </span>
-              ) : null}
-            </Link>
-          </div>
-        </>
-      ) : (
-        <span className="tma-top-bar__brand" />
-      )}
+          ) : null}
+        </Link>
+      </div>
     </header>
   );
 }

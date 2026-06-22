@@ -81,11 +81,6 @@ export class AuthService {
       },
     });
 
-    const startParam = params.get("start_param")?.trim();
-    if (startParam) {
-      await this.applyStartParamAttribution(user.id, telegramId, startParam);
-    }
-
     const freshUser = await this.prisma.user.findUniqueOrThrow({ where: { telegramId } });
 
     const expiresIn = this.parseExpiresIn(this.config.get<string>("JWT_EXPIRES_IN") ?? "7d");
@@ -95,50 +90,6 @@ export class AuthService {
     });
 
     return { accessToken, expiresIn, user: freshUser };
-  }
-
-  /**
-   * Telegram Mini App `start_param` from deep link (`?startapp=...`).
-   * - `ref_<referralCode>` — set `referredByUserId` once (no self-referral).
-   * - `c_<campaignSlug>` — attach `TrafficCampaign` once (first touch).
-   */
-  private async applyStartParamAttribution(userId: string, telegramId: string, startParam: string): Promise<void> {
-    if (startParam.startsWith("ref_")) {
-      const code = startParam.slice("ref_".length).trim();
-      if (!code) {
-        return;
-      }
-      const referrer = await this.prisma.user.findUnique({
-        where: { referralCode: code },
-        select: { id: true, telegramId: true },
-      });
-      if (!referrer || referrer.telegramId === telegramId) {
-        return;
-      }
-      await this.prisma.user.updateMany({
-        where: { id: userId, referredByUserId: null },
-        data: { referredByUserId: referrer.id },
-      });
-      return;
-    }
-
-    if (startParam.startsWith("c_")) {
-      const slug = startParam.slice("c_".length).trim();
-      if (!slug) {
-        return;
-      }
-      const campaign = await this.prisma.trafficCampaign.findUnique({
-        where: { slug },
-        select: { id: true },
-      });
-      if (!campaign) {
-        return;
-      }
-      await this.prisma.user.updateMany({
-        where: { id: userId, campaignId: null },
-        data: { campaignId: campaign.id },
-      });
-    }
   }
 
   private parseInitData(raw: string): Map<string, string> {

@@ -125,7 +125,7 @@ export function OrdersPage() {
                 </span>
               </div>
               <div style={{ marginTop: 8, fontWeight: 600 }}>
-                {formatPrice(o.totalUzs)}
+                {formatPrice(o.totalKrw)}
               </div>
             </Link>
           </li>

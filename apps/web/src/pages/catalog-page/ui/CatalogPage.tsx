@@ -14,16 +14,12 @@ import type { Product, ProductListSort } from '../../../app/parfumApi';
 import {
   getParfumApiBaseUrl,
   useGetBannersQuery,
-  useGetBrandsQuery,
+  useGetBestsellerProductsQuery,
   useGetCategoriesQuery,
-  useGetFragranceFamiliesQuery,
-  useGetHighlightsQuery,
   useGetProductsQuery,
-  useGetRecentlyViewedQuery,
+  useGetSaleProductsQuery,
 } from '../../../app/parfumApi';
 import { BannerCarousel } from '../../../widgets/banner-carousel/ui/BannerCarousel';
-import { useAppSelector } from '../../../app/hooks';
-import { catalogListingDisplay } from '../../../shared/lib/productSizes';
 import { formatPrice } from '../../../shared/lib/money';
 import { resolveProductDiscount } from '../../../shared/lib/productDiscount';
 import { ProductGridTile } from '../../../shared/ui/ProductGridTile';
@@ -31,73 +27,30 @@ import { trackEvent } from '../../../shared/lib/analytics';
 import './catalog-page.css';
 
 const PAGE_SIZE = 20;
-
-type Gender = 'MEN' | 'WOMEN' | 'UNISEX' | '';
-
-/** Remount grid when filters change so page is never stale on the first request (fixes empty/wrong products). */
-function catalogFilterKey(
-  categorySlug: string,
-  brandSlug: string,
-  familySlug: string,
-  gender: Gender,
-  sort: ProductListSort,
-): string {
-  return `${categorySlug}\0${brandSlug}\0${familySlug}\0${gender}\0${sort}`;
-}
+const SECTION_PAGE_SIZE = 10;
 
 function productImageUrl(id: string, images: string[] | undefined): string {
-  if (images?.length) {
-    return images[0];
-  }
-  return `https://picsum.photos/seed/pb-${id}/400/400`;
+  return images?.[0] ?? `https://picsum.photos/seed/ansor-${id}/400/400`;
 }
 
-function HighlightCard({
-  product,
-  extraBadge,
-}: {
-  product: Product;
-  extraBadge?: string;
-}) {
+function ProductRowCard({ product }: { product: Product }) {
   const { t } = useTranslation();
-  const list = catalogListingDisplay(product.priceUzs, product.sizes);
   const discount = resolveProductDiscount(product);
   return (
     <Link to={`/product/${product.id}`} className="home-h-card">
       <div className="home-h-card__media">
-        {extraBadge ? (
-          <span className="home-h-card__badge home-h-card__badge--secondary">
-            {extraBadge}
-          </span>
-        ) : null}
         {discount ? (
-          <span
-            className="home-h-card__badge"
-            style={extraBadge ? { top: 36 } : undefined}
-          >
+          <span className="home-h-card__badge">
             {t('catalog.discountBadge', { percent: discount.percent })}
           </span>
         ) : null}
-        <img
-          src={productImageUrl(product.id, product.images)}
-          alt=""
-          loading="lazy"
-        />
+        <img src={productImageUrl(product.id, product.images)} alt="" loading="lazy" />
       </div>
       <div className="home-h-card__meta">
         <span className="home-h-card__title">{product.title}</span>
         <span className="home-h-card__price-row">
           <span className="home-h-card__price">
-            {list.showFromPrefix ? (
-              <>
-                {t('catalog.from')}{' '}
-                <span style={{ whiteSpace: 'nowrap' }}>
-                  {formatPrice(list.displayPrice)}
-                </span>
-              </>
-            ) : (
-              formatPrice(list.displayPrice)
-            )}
+            {formatPrice(product.priceKrw)}
           </span>
           {discount ? (
             <span className="home-h-card__old-price">
@@ -110,7 +63,18 @@ function HighlightCard({
   );
 }
 
-function HighlightCarouselSkeleton() {
+function HorizontalRow({ products }: { products: Product[] }) {
+  if (products.length === 0) return null;
+  return (
+    <div className="home-h-scroll">
+      {products.map((product) => (
+        <ProductRowCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+
+function HighlightSkeleton() {
   return (
     <div className="home-h-scroll" aria-hidden>
       {Array.from({ length: 4 }).map((_, i) => (
@@ -120,17 +84,44 @@ function HighlightCarouselSkeleton() {
   );
 }
 
-function CatalogInfiniteGrid({
+function ProductSection({
+  title,
+  rows,
+  loading,
+}: {
+  title: string;
+  rows: Product[][];
+  loading: boolean;
+}) {
+  const { t } = useTranslation();
+  const hasProducts = rows.some((row) => row.length > 0);
+  return (
+    <section className="home-section">
+      <div className="home-section__head">
+        <h2 className="home-section__title">{title}</h2>
+        <Link to="/search" className="home-section__link">
+          {t('catalog.viewAll')}
+        </Link>
+      </div>
+      {loading && !hasProducts ? (
+        <>
+          <HighlightSkeleton />
+          <HighlightSkeleton />
+        </>
+      ) : hasProducts ? (
+        rows.map((row, index) => <HorizontalRow key={index} products={row} />)
+      ) : (
+        <p className="home-empty-section">{t('catalog.sectionEmpty')}</p>
+      )}
+    </section>
+  );
+}
+
+function CatalogGrid({
   categorySlug,
-  brandSlug,
-  familySlug,
-  gender,
   sort,
 }: {
   categorySlug: string;
-  brandSlug: string;
-  familySlug: string;
-  gender: Gender;
   sort: ProductListSort;
 }) {
   const { t } = useTranslation();
@@ -140,16 +131,12 @@ function CatalogInfiniteGrid({
     total: 0,
   });
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  /** Avoids double-appending the same page when layout effects run twice (React Strict Mode). */
   const mergedPagesRef = useRef<Set<number>>(new Set());
 
   const { data, isLoading, isError, isFetching } = useGetProductsQuery({
     page,
     pageSize: PAGE_SIZE,
     categorySlug: categorySlug || undefined,
-    brandSlug: brandSlug || undefined,
-    familySlug: familySlug || undefined,
-    gender: gender || undefined,
     sort: sort !== 'newest' ? sort : undefined,
   });
 
@@ -160,7 +147,6 @@ function CatalogInfiniteGrid({
     if (mergedPagesRef.current.has(slicePage)) return;
     mergedPagesRef.current.add(slicePage);
     const pageItems = data.items ?? [];
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fold RTK page slices into accumulated list before paint
     setList((prev) => ({
       items: page === 1 ? pageItems : [...prev.items, ...pageItems],
       total: typeof data.total === 'number' ? data.total : prev.total,
@@ -180,8 +166,7 @@ function CatalogInfiniteGrid({
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el || !hasMore) return;
-    const root =
-      (document.querySelector('.tma-main') as Element | null) ?? null;
+    const root = (document.querySelector('.tma-main') as Element | null) ?? null;
     const ob = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) loadMore();
@@ -190,7 +175,6 @@ function CatalogInfiniteGrid({
     );
     ob.observe(el);
     return () => ob.disconnect();
-    // Re-subscribe when a fetch finishes while the sentinel stays in view (IO does not re-fire if intersection unchanged).
   }, [loadMore, isFetching, hasMore]);
 
   if (isError) {
@@ -219,7 +203,6 @@ function CatalogInfiniteGrid({
           </span>
         ) : null}
       </div>
-
       {showInitialLoader ? (
         <div className="home-grid">
           <div className="explore-grid">
@@ -246,13 +229,7 @@ function CatalogInfiniteGrid({
             />
           ) : null}
           {isFetching && catalogItems.length > 0 ? (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                padding: 16,
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
               <Spinner size="m" />
             </div>
           ) : null}
@@ -264,23 +241,22 @@ function CatalogInfiniteGrid({
 
 export function CatalogPage() {
   const { t } = useTranslation();
-  const token = useAppSelector((s) => s.auth.accessToken);
-
   const [categorySlug, setCategorySlug] = useState('');
-  const [brandSlug, setBrandSlug] = useState('');
-  const [familySlug, setFamilySlug] = useState('');
-  const [gender, setGender] = useState<Gender>('');
   const [sort, setSort] = useState<ProductListSort>('newest');
-
   const { data: categories } = useGetCategoriesQuery();
-  const { data: brands } = useGetBrandsQuery();
-  const { data: families } = useGetFragranceFamiliesQuery();
   const { data: banners } = useGetBannersQuery();
-  const { data: highlights, isLoading: highlightsLoading } =
-    useGetHighlightsQuery();
-  const { data: recentlyViewed } = useGetRecentlyViewedQuery(undefined, {
-    skip: !token,
+  const { data: saleRow1, isLoading: saleLoading1 } = useGetSaleProductsQuery({
+    page: 1,
+    pageSize: SECTION_PAGE_SIZE,
   });
+  const { data: saleRow2, isLoading: saleLoading2 } = useGetSaleProductsQuery({
+    page: 2,
+    pageSize: SECTION_PAGE_SIZE,
+  });
+  const { data: bestsellerRow1, isLoading: bestsellerLoading1 } =
+    useGetBestsellerProductsQuery({ page: 1, pageSize: SECTION_PAGE_SIZE });
+  const { data: bestsellerRow2, isLoading: bestsellerLoading2 } =
+    useGetBestsellerProductsQuery({ page: 2, pageSize: SECTION_PAGE_SIZE });
 
   useEffect(() => {
     trackEvent('APP_OPEN');
@@ -290,57 +266,13 @@ export function CatalogPage() {
     () => categories?.find((c) => c.slug === categorySlug) ?? null,
     [categories, categorySlug],
   );
-  const activeBrand = useMemo(
-    () => brands?.find((b) => b.slug === brandSlug) ?? null,
-    [brands, brandSlug],
-  );
-
-  const activeFamily = useMemo(
-    () => families?.find((f) => f.slug === familySlug) ?? null,
-    [families, familySlug],
-  );
-
-  const hasAnyFilter = Boolean(categorySlug || brandSlug || familySlug || gender);
-
-  const resetAll = useCallback(() => {
-    setCategorySlug('');
-    setBrandSlug('');
-    setFamilySlug('');
-    setGender('');
-    setSort('newest');
-  }, []);
-
-  const bestseller = highlights?.bestseller ?? [];
-  const newArrivals = highlights?.newArrivals ?? [];
-  const discounted = highlights?.discounted ?? [];
-  const recent = recentlyViewed ?? [];
+  const hasBanner = Boolean(banners?.length);
 
   return (
     <div className="home-page">
-      <BannerCarousel banners={banners ?? []} />
+      {hasBanner ? <BannerCarousel banners={banners ?? []} /> : null}
 
-      {/* Gender chips */}
-      <div
-        className="home-chip-row"
-        role="tablist"
-        aria-label={t('catalog.filterGenderTitle')}
-      >
-        <GenderChip current={gender} value="" onSelect={setGender}>
-          {t('catalog.filterAll')}
-        </GenderChip>
-        <GenderChip current={gender} value="MEN" onSelect={setGender}>
-          {t('catalog.genderMen')}
-        </GenderChip>
-        <GenderChip current={gender} value="WOMEN" onSelect={setGender}>
-          {t('catalog.genderWomen')}
-        </GenderChip>
-        <GenderChip current={gender} value="UNISEX" onSelect={setGender}>
-          {t('catalog.genderUnisex')}
-        </GenderChip>
-      </div>
-
-      {/* Categories chip row */}
-      {categories?.length ? (
+      {(!hasBanner || categories?.length) ? (
         <>
           <div className="home-section__head">
             <h2 className="home-section__title">
@@ -352,241 +284,48 @@ export function CatalogPage() {
             role="tablist"
             aria-label={t('catalog.filterCategoriesTitle')}
           >
-            <button
-              type="button"
-              className={`home-chip${categorySlug === '' ? ' home-chip--active' : ''}`}
-              onClick={() => setCategorySlug('')}
-            >
+            <CategoryChip current={categorySlug} value="" onSelect={setCategorySlug}>
               {t('catalog.filterAllCategories')}
-            </button>
-            {categories.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={`home-chip${
-                  categorySlug === c.slug ? ' home-chip--active' : ''
-                }`}
-                onClick={() =>
-                  setCategorySlug((prev) => (prev === c.slug ? '' : c.slug))
+            </CategoryChip>
+            {(categories ?? []).map((category) => (
+              <CategoryChip
+                key={category.id}
+                current={categorySlug}
+                value={category.slug}
+                onSelect={(value) =>
+                  setCategorySlug((prev) => (prev === value ? '' : value))
                 }
               >
-                {c.name}
-              </button>
+                {category.name}
+              </CategoryChip>
             ))}
           </div>
         </>
       ) : null}
 
-      {/* Brand chip row */}
-      {brands?.length ? (
-        <>
-          <div className="home-section__head">
-            <h2 className="home-section__title">
-              {t('catalog.filterBrandsTitle')}
-            </h2>
-          </div>
-          <div
-            className="home-chip-row"
-            role="tablist"
-            aria-label={t('catalog.filterBrandsTitle')}
-          >
-            <button
-              type="button"
-              className={`home-chip${brandSlug === '' ? ' home-chip--active' : ''}`}
-              onClick={() => setBrandSlug('')}
-            >
-              {t('catalog.filterAllBrands')}
-            </button>
-            {brands.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                className={`home-chip${
-                  brandSlug === b.slug ? ' home-chip--active' : ''
-                }`}
-                onClick={() =>
-                  setBrandSlug((prev) => (prev === b.slug ? '' : b.slug))
-                }
-              >
-                {b.name}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : null}
+      <ProductSection
+        title={t('catalog.saleProducts')}
+        rows={[saleRow1?.items ?? [], saleRow2?.items ?? []]}
+        loading={saleLoading1 || saleLoading2}
+      />
+      <ProductSection
+        title={t('catalog.bestsellerProducts')}
+        rows={[bestsellerRow1?.items ?? [], bestsellerRow2?.items ?? []]}
+        loading={bestsellerLoading1 || bestsellerLoading2}
+      />
 
-      {families?.length ? (
-        <>
-          <div className="home-section__head">
-            <h2 className="home-section__title">
-              {t('catalog.filterFamiliesTitle')}
-            </h2>
-          </div>
-          <div className="home-chip-row" role="tablist">
-            <button
-              type="button"
-              className={`home-chip${familySlug === '' ? ' home-chip--active' : ''}`}
-              onClick={() => setFamilySlug('')}
-            >
-              {t('catalog.filterAllFamilies')}
-            </button>
-            {families.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                className={`home-chip${
-                  familySlug === f.slug ? ' home-chip--active' : ''
-                }`}
-                onClick={() =>
-                  setFamilySlug((prev) => (prev === f.slug ? '' : f.slug))
-                }
-              >
-                {f.name}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      {/* Highlight: bestsellers */}
-      <section className="home-section">
-        <div className="home-section__head">
-          <h2 className="home-section__title">{t('catalog.bestseller')}</h2>
-        </div>
-        {highlightsLoading && bestseller.length === 0 ? (
-          <HighlightCarouselSkeleton />
-        ) : bestseller.length ? (
-          <div className="home-h-scroll">
-            {bestseller.map((p) => (
-              <HighlightCard key={p.id} product={p} />
-            ))}
-          </div>
-        ) : (
-          <p className="home-empty-section">{t('catalog.sectionEmpty')}</p>
-        )}
-      </section>
-
-      {/* Highlight: new arrivals */}
-      {(highlightsLoading || newArrivals.length > 0) && (
-        <section className="home-section">
-          <div className="home-section__head">
-            <h2 className="home-section__title">{t('catalog.newArrivals')}</h2>
-          </div>
-          {highlightsLoading && newArrivals.length === 0 ? (
-            <HighlightCarouselSkeleton />
-          ) : (
-            <div className="home-h-scroll">
-              {newArrivals.map((p) => (
-                <HighlightCard
-                  key={p.id}
-                  product={p}
-                  extraBadge={t('catalog.badgeNew')}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Highlight: discounted */}
-      {(highlightsLoading || discounted.length > 0) && (
-        <section className="home-section">
-          <div className="home-section__head">
-            <h2 className="home-section__title">{t('catalog.discounted')}</h2>
-          </div>
-          {highlightsLoading && discounted.length === 0 ? (
-            <HighlightCarouselSkeleton />
-          ) : (
-            <div className="home-h-scroll">
-              {discounted.map((p) => (
-                <HighlightCard key={p.id} product={p} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Highlight: recently viewed (auth only) */}
-      {recent.length > 0 ? (
-        <section className="home-section">
-          <div className="home-section__head">
-            <h2 className="home-section__title">
-              {t('catalog.recentlyViewed')}
-            </h2>
-          </div>
-          <div className="home-h-scroll">
-            {recent.map((p) => (
-              <HighlightCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* Active filter pills */}
-      {hasAnyFilter ? (
+      {activeCategory ? (
         <div className="home-active-filters">
-          {activeCategory ? (
-            <button
-              type="button"
-              className="home-active-filters__pill"
-              onClick={() => setCategorySlug('')}
-              aria-label={t('catalog.removeFilter')}
-            >
-              {activeCategory.name}
-              <span aria-hidden className="home-active-filters__pill-x">
-                ×
-              </span>
-            </button>
-          ) : null}
-          {activeBrand ? (
-            <button
-              type="button"
-              className="home-active-filters__pill"
-              onClick={() => setBrandSlug('')}
-              aria-label={t('catalog.removeFilter')}
-            >
-              {activeBrand.name}
-              <span aria-hidden className="home-active-filters__pill-x">
-                ×
-              </span>
-            </button>
-          ) : null}
-          {gender ? (
-            <button
-              type="button"
-              className="home-active-filters__pill"
-              onClick={() => setGender('')}
-              aria-label={t('catalog.removeFilter')}
-            >
-              {gender === 'MEN'
-                ? t('catalog.genderMen')
-                : gender === 'WOMEN'
-                  ? t('catalog.genderWomen')
-                  : t('catalog.genderUnisex')}
-              <span aria-hidden className="home-active-filters__pill-x">
-                ×
-              </span>
-            </button>
-          ) : null}
-          {activeFamily ? (
-            <button
-              type="button"
-              className="home-active-filters__pill"
-              onClick={() => setFamilySlug('')}
-              aria-label={t('catalog.removeFilter')}
-            >
-              {activeFamily.name}
-              <span aria-hidden className="home-active-filters__pill-x">
-                ×
-              </span>
-            </button>
-          ) : null}
           <button
             type="button"
-            className="home-active-filters__reset"
-            onClick={resetAll}
+            className="home-active-filters__pill"
+            onClick={() => setCategorySlug('')}
+            aria-label={t('catalog.removeFilter')}
           >
-            {t('catalog.resetFilters')}
+            {activeCategory.name}
+            <span aria-hidden className="home-active-filters__pill-x">
+              x
+            </span>
           </button>
         </div>
       ) : null}
@@ -608,26 +347,20 @@ export function CatalogPage() {
         </Select>
       </div>
 
-      <CatalogInfiniteGrid
-        key={catalogFilterKey(categorySlug, brandSlug, familySlug, gender, sort)}
-        categorySlug={categorySlug}
-        brandSlug={brandSlug}
-        familySlug={familySlug}
-        gender={gender}
-        sort={sort}
-      />
+      <CatalogGrid key={`${categorySlug}:${sort}`} categorySlug={categorySlug} sort={sort} />
     </div>
   );
 }
-function GenderChip({
+
+function CategoryChip({
   current,
   value,
   onSelect,
   children,
 }: {
-  current: Gender;
-  value: Gender;
-  onSelect: (g: Gender) => void;
+  current: string;
+  value: string;
+  onSelect: (value: string) => void;
   children: ReactNode;
 }) {
   const isActive = current === value;
@@ -643,4 +376,3 @@ function GenderChip({
     </button>
   );
 }
-

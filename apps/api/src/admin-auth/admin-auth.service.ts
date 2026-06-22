@@ -1,12 +1,8 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
+import type { AdminUser } from "@prisma/client";
 import * as bcrypt from "bcrypt";
-import {
-  adminUserWithPermissionsInclude,
-  collectEffectivePermissionKeys,
-  type AdminUserWithPermissions,
-} from "../common/rbac/admin-user-with-permissions";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -44,31 +40,27 @@ export class AdminAuthService {
   }
 
   async getMe(adminId: string) {
-    const admin = await this.prisma.adminUser.findUnique({
-      where: { id: adminId },
-      include: adminUserWithPermissionsInclude,
-    });
+    const admin = await this.prisma.adminUser.findUnique({ where: { id: adminId } });
     if (!admin || !admin.isActive) {
       throw new UnauthorizedException();
     }
     return this.toMeResponse(admin);
   }
 
-  toMeResponse(admin: AdminUserWithPermissions) {
+  toMeResponse(admin: AdminUser) {
     return {
       id: admin.id,
       email: admin.email,
       fullName: admin.fullName,
       isActive: admin.isActive,
-      role: admin.role
-        ? {
-            id: admin.role.id,
-            key: admin.role.key,
-            name: admin.role.name,
-            isSuperAdmin: admin.role.isSuperAdmin,
-          }
-        : null,
-      permissions: collectEffectivePermissionKeys(admin),
+      isSuperAdmin: admin.isSuperAdmin,
+      role: {
+        id: "super-admin",
+        key: "super_admin",
+        name: "Super Admin",
+        isSuperAdmin: true,
+      },
+      permissions: ["*"],
     };
   }
 
