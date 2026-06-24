@@ -1,6 +1,545 @@
 # Ansor Market Project State
 
-Last updated: 2026-06-22
+Last updated: 2026-06-24
+
+## 2026-06-24 Phase 4 DB Blocker and Phase 5 Cleanup Checkpoint
+
+### Completed
+
+- Continued from the 2026-06-23 Phase 4 Realtime/Runtime Verification checkpoint.
+- Re-read required project docs and confirmed the task was to resume, not restart.
+- Checked database availability:
+  - `apps/api/.env` does not exist.
+  - Docker is installed, but Docker Desktop Linux engine is not reachable.
+  - `docker compose -f docker/docker-compose.test.yml up -d` failed before Postgres startup with:
+    - `open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.`
+  - Because there was no reachable database, `pnpm --filter api db:migrate` and `pnpm --filter api db:seed` were not run.
+- Documented the live-smoke blocker and proceeded with Phase 5 cleanup as requested.
+- Removed inactive legacy backend source modules/files for:
+  - admin campaigns
+  - admin coins
+  - analytics
+  - brands
+  - coins
+  - fragrance families
+  - lifecycle automations
+  - promotions
+  - recommendations
+  - reward settings
+  - segments
+  - RBAC guards/constants/decorators
+  - roles/permissions controllers/services/DTOs
+  - product size presets and product-size helpers
+  - stale service specs that targeted removed legacy contracts
+- Removed inactive legacy Prisma RBAC seed file.
+- Removed stale Telegram coin notification helper methods.
+- Cleaned active source/env/README naming:
+  - Swagger title/description and API log prefix now use Ansor Market naming.
+  - S3 default bucket now uses `ansor-market`.
+  - API/admin/web env examples no longer advertise old Parfumbox proxy/referral naming.
+  - Vite dev proxy path changed from `/_parfumbox-api` to `/_ansor-api`.
+  - Admin auth/local notification storage keys and web language/cart storage keys use Ansor naming.
+  - README/package/docker compose naming updated to Ansor Market.
+- Trimmed stale admin Uzbek locale keys for removed pages and added current nav/status keys including `PREPARING`.
+- Removed stale web locale coin/referral/UZS/profile bonus/order coin strings in Uzbek and Russian locales.
+- Updated API e2e fixtures from removed role/product perfume fields to the current Super Admin, category, measurement unit, `priceKrw`, and `stockQuantity` schema.
+- Verified JSON locale files parse successfully.
+- Verified active-source grep for targeted legacy terms:
+  - active source/env examples/README are clean for the targeted stale terms
+  - remaining hits are historical Prisma migration files only
+- Ran required install/build verification successfully.
+
+### Files Changed This Session
+
+Backend cleanup and naming:
+
+- `apps/api/.env.example`
+- `apps/api/jest.config.js`
+- `apps/api/prisma/seed-rbac.ts` (deleted)
+- `apps/api/src/admin-auth/admin-auth.service.spec.ts` (deleted)
+- `apps/api/src/admin-auth/dto/admin-login.dto.ts`
+- `apps/api/src/admin-campaigns/**` (deleted)
+- `apps/api/src/admin-coins/**` (deleted)
+- `apps/api/src/admin-finance/admin-finance.service.spec.ts` (deleted)
+- `apps/api/src/admin-settings/dto/create-permission.dto.ts` (deleted)
+- `apps/api/src/admin-settings/dto/create-role.dto.ts` (deleted)
+- `apps/api/src/admin-settings/dto/set-permissions.dto.ts` (deleted)
+- `apps/api/src/admin-settings/dto/update-permission.dto.ts` (deleted)
+- `apps/api/src/admin-settings/dto/update-role.dto.ts` (deleted)
+- `apps/api/src/admin-settings/permissions.*` (deleted)
+- `apps/api/src/admin-settings/roles.*` (deleted)
+- `apps/api/src/admin-settings/admin-users-mgmt.service.spec.ts` (deleted)
+- `apps/api/src/admin-stats/admin-stats.service.spec.ts` (deleted)
+- `apps/api/src/admin-users/admin-users.service.spec.ts` (deleted)
+- `apps/api/src/analytics/**` (deleted)
+- `apps/api/src/auth/auth.service.spec.ts` (deleted)
+- `apps/api/src/brands/**` (deleted)
+- `apps/api/src/broadcasts/broadcasts.service.spec.ts` (deleted)
+- `apps/api/src/categories/categories.service.spec.ts`
+- `apps/api/src/coins/**` (deleted)
+- `apps/api/src/common/rbac/**` (deleted)
+- `apps/api/src/fragrance-families/**` (deleted)
+- `apps/api/src/inventory/inventory.service.spec.ts` (deleted)
+- `apps/api/src/lifecycle/**` (deleted)
+- `apps/api/src/main.ts`
+- `apps/api/src/orders/orders.service.spec.ts` (deleted)
+- `apps/api/src/products/admin-size-presets.controller.ts` (deleted)
+- `apps/api/src/products/dto/product-size-line.dto.ts` (deleted)
+- `apps/api/src/products/product-sizes.util.ts` (deleted)
+- `apps/api/src/products/product-sizes.util.spec.ts` (deleted)
+- `apps/api/src/products/products.service.spec.ts` (deleted)
+- `apps/api/src/products/size-presets.service.ts` (deleted)
+- `apps/api/src/products/size-presets.service.spec.ts` (deleted)
+- `apps/api/src/promotions/**` (deleted)
+- `apps/api/src/realtime/order-events.service.spec.ts` (deleted)
+- `apps/api/src/recommendations/**` (deleted)
+- `apps/api/src/reward-settings/**` (deleted)
+- `apps/api/src/segments/**` (deleted)
+- `apps/api/src/storage/storage.service.ts`
+- `apps/api/src/telegram/telegram-notify.service.ts`
+- `apps/api/src/telegram/telegram-notify.service.spec.ts` (deleted)
+- `apps/api/src/users/users.service.spec.ts` (deleted)
+- `apps/api/test/e2e/products.e2e-spec.ts`
+- `apps/api/test/setup/db.ts`
+- `apps/api/test/setup/e2e-env.ts`
+- `apps/api/test/setup/e2e-fixtures.ts`
+
+Admin cleanup and naming:
+
+- `apps/admin/.env.example`
+- `apps/admin/src/app/apiBase.ts`
+- `apps/admin/src/features/auth/authSlice.ts`
+- `apps/admin/src/features/navigation/adminNavSections.ts`
+- `apps/admin/src/features/notifications/notificationSound.ts`
+- `apps/admin/src/i18n/locales/uz.json`
+- `apps/admin/vite.config.ts`
+
+Telegram Mini App cleanup and naming:
+
+- `apps/web/.env.example`
+- `apps/web/src/app/parfumApi.ts`
+- `apps/web/src/features/cart/cartSlice.ts`
+- `apps/web/src/i18n/index.ts`
+- `apps/web/src/i18n/locales/ru.json`
+- `apps/web/src/i18n/locales/uz.json`
+- `apps/web/src/shared/styles/tokens.css`
+- `apps/web/src/vite-env.d.ts`
+- `apps/web/vite.config.ts`
+
+Repo/docs:
+
+- `README.md`
+- `docker-compose.yml`
+- `package.json`
+- `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`
+- `docs/ANSOR_MARKET_PROJECT_STATE.md`
+- `docs/ANSOR_MARKET_TODO.md`
+
+Generated/updated by build:
+
+- `apps/api/tsconfig.build.tsbuildinfo`
+
+### Build/Test Status
+
+Run:
+
+```bash
+pnpm install
+pnpm --filter api build
+pnpm --filter web build
+pnpm --filter admin build
+```
+
+Result:
+
+- `pnpm install` passed; lockfile was already up to date.
+- API build passed.
+- Web build passed.
+- Admin build passed.
+
+Warnings:
+
+- API build still shows Prisma `package.json#prisma` config deprecation warning for Prisma 7.
+- Admin Vite build still shows the existing large chunk warning and plugin timing warning.
+
+Not run:
+
+```bash
+pnpm --filter api db:migrate
+pnpm --filter api db:seed
+pnpm --filter api test
+pnpm --filter api test:e2e
+```
+
+Reason:
+
+- Live database setup is blocked because Docker Desktop Linux engine is not running/reachable and `apps/api/.env` is absent.
+
+### Runtime Smoke Status
+
+Still blocked:
+
+- admin login
+- dashboard via `/admin/stats/dashboard`
+- product/category/measurement-unit CRUD
+- order status update to `PREPARING`
+- admin notification bell read/invalidation
+- user order/status notifications
+- broadcast send
+- inventory adjustment
+- `/admin` Socket.IO event delivery
+- `/user` Socket.IO event delivery
+
+Exact blocker:
+
+- `docker compose -f docker/docker-compose.test.yml up -d` cannot start test Postgres because Docker Desktop Linux engine is unavailable at `//./pipe/dockerDesktopLinuxEngine`.
+- No valid `apps/api/.env` is present as a fallback source for `DATABASE_URL`, `JWT_SECRET`, and `ADMIN_JWT_SECRET`.
+
+### Known Issues
+
+- A reachable migrated Ansor database is still required for full live Phase 4 runtime smoke testing.
+- Historical Prisma migrations still contain old Parfumbox/UZS/coin/referral/campaign/segment/brand terms by design; active source/env examples/README are clean for the targeted stale terms.
+- Internal compatibility identifiers remain:
+  - `parfumApi` RTK Query file/slice names
+  - Mantine `parfum` color token
+  These are not visible UI copy and should only be renamed in a separate low-risk cleanup if desired.
+- `BroadcastsService.sendNow` still treats Telegram send failures as notification failures because user notification creation happens after `telegram.sendPlainText` inside the same try block; this preserves the existing pattern but may be worth revisiting so in-app broadcasts are delivered even if Telegram bot send fails.
+
+### Next Exact Steps
+
+1. Start Docker Desktop or provide `apps/api/.env` with a reachable Ansor database and valid JWT secrets.
+2. Run:
+   - `pnpm --filter api db:migrate`
+   - `pnpm --filter api db:seed`
+3. Start API/admin/web as needed.
+4. Run live smoke tests for:
+   - admin login
+   - `/admin/stats/dashboard`
+   - product CRUD
+   - category CRUD
+   - measurement-unit CRUD
+   - order status update to `PREPARING`
+   - admin notification bell read/invalidation
+   - user order/status notifications
+   - broadcast send
+   - inventory adjustment
+   - `/admin` Socket.IO event delivery
+   - `/user` Socket.IO event delivery
+5. After smoke passes, consider targeted tests:
+   - `pnpm --filter api test`
+   - `pnpm --filter api test:e2e`
+
+### Next Exact Prompt
+
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-24 Phase 5 Cleanup checkpoint. First make a reachable Ansor test database available by starting Docker Desktop for Docker test Postgres or by creating a valid `apps/api/.env` with `DATABASE_URL`, `JWT_SECRET`, and `ADMIN_JWT_SECRET`. Then run `pnpm --filter api db:migrate` and `pnpm --filter api db:seed`. Start the API/admin/web as needed and live smoke-test admin login, `/admin/stats/dashboard`, product/category/measurement-unit CRUD, order status update to `PREPARING`, admin notification bell read/invalidation, user order/status notifications, broadcast send, inventory adjustment, and `/admin` + `/user` Socket.IO event delivery. If smoke passes, run `pnpm --filter api test` and `pnpm --filter api test:e2e` if feasible. Preserve existing architecture/UI/realtime patterns and update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.
+
+## 2026-06-23 Phase 4 Realtime/Runtime Verification Checkpoint
+
+### Completed
+
+- Continued from the 2026-06-22 Phase 3 Admin Refactor checkpoint.
+- Verified that the backend had an `admin-users` module on disk but it was stale and inactive:
+  - not imported by `AppModule`
+  - still depended on RBAC permissions, referrals, tiers, coin ledger, promo, campaign, and UZS fields removed from the active Ansor schema
+- Refactored and activated backend customer admin endpoints:
+  - `GET /admin/users`
+  - `GET /admin/users/:userId/details`
+- Added Ansor customer list/detail payloads for the refactored admin Users screens:
+  - Telegram profile fields
+  - saved addresses
+  - order counts
+  - recent order history
+  - total spent KRW and average order value
+  - pending/delivered/cancelled order counts
+  - wishlist, cart, address, and review counts
+- Added `/admin/stats/dashboard` alias for the admin dashboard RTK Query contract while preserving `GET /admin/stats`.
+- Added explicit `POST /admin/notifications/:id/read` support for the admin notification bell while preserving the existing PATCH endpoint.
+- Fixed admin order item quantity display to use backend `quantity` instead of stale `qty`.
+- Fixed admin saved address display to use Kakao-normalized `addressName`, `roadAddressName`, and `jibunAddressName` fields.
+- Fixed admin measurement-unit CRUD to match the backend Ansor contract:
+  - `slug`
+  - `name`
+  - `symbol`
+  - `sortOrder`
+  - `allowDecimal`
+  - removed unsupported `isActive` payload from the admin form
+- Fixed API runtime packaging:
+  - `apps/api/nest-cli.json` now deletes `dist` before build
+  - `apps/api/tsconfig.build.json` disables incremental build for the runtime package
+  - verified no declaration-only active runtime files remain in `apps/api/dist`
+- Verified route-level API runtime mapping before Prisma DB connection:
+  - `/admin/users`
+  - `/admin/users/:userId/details`
+  - `/admin/stats/dashboard`
+  - `/admin/notifications/:id/read` with POST
+  - `/admin/orders/:id/status`
+  - `/admin/inventory/:productId/adjust`
+  - `/admin/broadcasts/:id/send`
+- Confirmed existing realtime source pattern remains intact:
+  - `/admin` namespace emits `orders:changed` and `notifications:new`
+  - `/user` namespace joins `user:{userId}` and emits `order:update`
+  - admin realtime hook invalidates `Order`, `Stats`, and `Notification` tags
+  - order status updates create user notifications and support `PREPARING`
+  - broadcasts create user notifications for active users
+- Ran required install/build verification successfully.
+
+### Files Changed This Session
+
+Backend:
+
+- `apps/api/nest-cli.json`
+- `apps/api/tsconfig.build.json`
+- `apps/api/src/admin-stats/admin-stats.controller.ts`
+- `apps/api/src/admin-users/admin-users.controller.ts`
+- `apps/api/src/admin-users/admin-users.module.ts`
+- `apps/api/src/admin-users/admin-users.service.ts`
+- `apps/api/src/app.module.ts`
+- `apps/api/src/notifications/admin-notifications.controller.ts`
+
+Admin:
+
+- `apps/admin/src/app/parfumApi.ts`
+- `apps/admin/src/pages/MeasurementUnitsPage.tsx`
+- `apps/admin/src/pages/OrdersPage.tsx`
+- `apps/admin/src/pages/UserDetailPage.tsx`
+
+Docs:
+
+- `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`
+- `docs/ANSOR_MARKET_PROJECT_STATE.md`
+- `docs/ANSOR_MARKET_TODO.md`
+
+Generated/updated by build:
+
+- `apps/api/tsconfig.build.tsbuildinfo`
+
+### Build/Test Status
+
+Run:
+
+```bash
+pnpm install
+pnpm --filter api build
+pnpm --filter web build
+pnpm --filter admin build
+```
+
+Result:
+
+- `pnpm install` passed; lockfile was already up to date.
+- API build passed.
+- Web build passed.
+- Admin build passed.
+
+Warnings:
+
+- API build still shows Prisma `package.json#prisma` config deprecation warning for Prisma 7.
+- Admin Vite build still shows the existing large chunk warning.
+- Web/admin Vite builds may show plugin timing warnings.
+
+Runtime smoke status:
+
+- API route mapping smoke passed up to Prisma initialization.
+- Full live endpoint smoke testing was blocked by local database availability:
+  - Docker Desktop engine was not running, so `docker compose -f docker/docker-compose.test.yml up -d` could not start test Postgres.
+  - A local Postgres process was listening on port 5432, but `postgres:postgres` was rejected with Prisma `P1000`.
+  - `apps/api/.env` does not exist and no `DATABASE_URL`, `JWT_SECRET`, or `ADMIN_JWT_SECRET` variables were set in the shell.
+
+Not fully run because of DB blocker:
+
+- Admin login live request
+- Dashboard data request
+- Product/category/measurement-unit CRUD live requests
+- Order status update live request including `PREPARING`
+- Admin notification bell live invalidation
+- User order/status notification live delivery
+- Broadcast send live request
+- Inventory adjustment live request
+- Socket.IO client event smoke with persisted orders/notifications
+
+### Known Issues
+
+- A reachable migrated Ansor database is required for full Phase 4 runtime smoke testing.
+- Docker Desktop needs to be started, or `apps/api/.env` needs a valid `DATABASE_URL` and JWT secrets for the local Postgres instance.
+- `BroadcastsService.sendNow` still treats Telegram send failures as notification failures because user notification creation happens after `telegram.sendPlainText` inside the same try block; this preserves the existing pattern but may be worth revisiting so in-app broadcasts are delivered even if Telegram bot send fails.
+- Some inactive old Uzbek locale keys for removed admin features remain and should be cleaned in Phase 5.
+- Internal compatibility names such as `parfumApi`, `parfum` color token, and old package/docker labels remain.
+
+### Next Exact Steps
+
+1. Start Phase 5 cleanup only after confirming whether to use Docker test Postgres or a real local Ansor database.
+2. Provide a reachable database by either:
+   - starting Docker Desktop and using `docker compose -f docker/docker-compose.test.yml up -d`, or
+   - creating `apps/api/.env` with valid `DATABASE_URL`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, and optional Telegram/MinIO/Kakao values.
+3. Run:
+   - `pnpm --filter api db:migrate`
+   - `pnpm --filter api db:seed`
+4. Start the API and smoke-test the live flows:
+   - admin login
+   - dashboard
+   - product/category/measurement-unit CRUD
+   - order status update to `PREPARING`
+   - admin notification bell read/invalidation
+   - user order/status notifications
+   - broadcast send
+   - inventory adjustment
+   - admin and user Socket.IO event delivery
+5. Then begin cleanup:
+   - remove inactive backend modules from disk
+   - remove stale locale keys
+   - search for remaining visible Parfumbox/perfume/UZS/coin/referral/campaign terminology
+   - rename internal compatibility names only if low-risk
+
+### Next Exact Prompt
+
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-23 Phase 4 Realtime/Runtime Verification checkpoint. First make a reachable Ansor test database available using Docker test Postgres or a valid `apps/api/.env`, then run `pnpm --filter api db:migrate` and `pnpm --filter api db:seed`. Start the API/admin/web as needed and live smoke-test admin login, dashboard, product/category/measurement-unit CRUD, order status update to `PREPARING`, admin notification bell read/invalidation, user order/status notifications, broadcast send, inventory adjustment, and `/admin` + `/user` Socket.IO event delivery. After live smoke passes or any blocker is documented, start Phase 5 cleanup only: remove inactive legacy modules/files and stale visible Parfumbox/perfume/UZS/coin/referral/campaign terminology without redesigning. Run `pnpm install`, `pnpm --filter api build`, `pnpm --filter web build`, and `pnpm --filter admin build`; update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.
+
+## 2026-06-22 Phase 3 Admin Refactor Checkpoint
+
+### Completed
+
+- Continued from the Phase 2 Telegram Mini App checkpoint.
+- Replaced the admin RTK Query slice with Ansor Market contracts:
+  - KRW money fields (`priceKrw`, `unitPriceKrw`, `subtotalKrw`, `totalKrw`)
+  - `MeasurementUnit`
+  - `UserAddress`
+  - `stockQuantity`
+  - sale/bestseller product flags
+  - Super Admin-only admin users
+  - no active coin/referral/reward/campaign/segment/brand/fragrance/size preset/RBAC endpoints
+- Simplified admin auth and navigation for active Super Admin access.
+- Removed admin routes/pages for removed Parfumbox surfaces:
+  - insights
+  - size presets
+  - rewards
+  - coin gifts
+  - coin ledger
+  - campaigns
+  - promotions
+  - segments
+  - automations
+  - brands
+  - roles
+  - permissions
+- Added `MeasurementUnitsPage` and routed Product Settings to Products, Measurement Units, Categories, and Banners.
+- Refactored dashboard to Ansor KPIs: revenue KRW, orders, products, inventory, engagement, and 14-day stats.
+- Refactored orders to KRW totals, address snapshots, unit snapshots, and `PREPARING` status.
+- Refactored products to category, measurement unit, KRW pricing, `stockQuantity`, low stock, sale/bestseller, active status, and max 2 image URLs.
+- Refactored users and user detail views to remove coins/referrals/campaigns/tiers and show Telegram profile, addresses, orders, wishlist, and cart fields.
+- Refactored finance to KRW report KPIs, status totals, daily revenue, top products, and top categories.
+- Refactored broadcasts to title/body/image/targetUrl with send-now flow and no segment targeting.
+- Refactored inventory to stock quantity summary, low-stock list, movements, and generic delta adjustment.
+- Refactored admin users to email/password/fullName/isActive with Super Admin badge only.
+- Updated admin money formatting to KRW.
+- Updated visible admin brand text to `Ansor Market Admin`.
+- Ran `pnpm --filter admin build` successfully.
+
+### Files Changed This Session
+
+Admin:
+
+- `apps/admin/src/app/App.tsx`
+- `apps/admin/src/app/parfumApi.ts`
+- `apps/admin/src/features/auth/authSlice.ts`
+- `apps/admin/src/features/auth/useCurrentAdmin.ts`
+- `apps/admin/src/features/navigation/adminNavSections.ts`
+- `apps/admin/src/i18n/locales/uz.json`
+- `apps/admin/src/layouts/AdminLayout.tsx`
+- `apps/admin/src/pages/BroadcastsPage.tsx`
+- `apps/admin/src/pages/DashboardPage.tsx`
+- `apps/admin/src/pages/FinancePage.tsx`
+- `apps/admin/src/pages/InventoryPage.tsx`
+- `apps/admin/src/pages/MeasurementUnitsPage.tsx`
+- `apps/admin/src/pages/OrdersPage.tsx`
+- `apps/admin/src/pages/ProductsPage.tsx`
+- `apps/admin/src/pages/UserDetailPage.tsx`
+- `apps/admin/src/pages/UsersPage.tsx`
+- `apps/admin/src/pages/WelcomePage.tsx`
+- `apps/admin/src/pages/settings/SettingsAdminUsersPage.tsx`
+- `apps/admin/src/pages/settings/SettingsIndexRedirect.tsx`
+- `apps/admin/src/shared/lib/money.ts`
+- `apps/admin/src/shared/lib/orderStatusMantine.ts`
+
+Deleted admin legacy files:
+
+- `apps/admin/src/features/referral-tree/AdminReferralTree.tsx`
+- `apps/admin/src/features/auth/permissions.ts`
+- `apps/admin/src/features/auth/RequirePermission.tsx`
+- `apps/admin/src/features/settings/groupPermissions.ts`
+- `apps/admin/src/features/settings/usePermissionLabel.ts`
+- `apps/admin/src/pages/AutomationsPage.tsx`
+- `apps/admin/src/pages/BrandsPage.tsx`
+- `apps/admin/src/pages/CampaignsPage.tsx`
+- `apps/admin/src/pages/CoinGiftsPage.tsx`
+- `apps/admin/src/pages/CoinLedgerPage.tsx`
+- `apps/admin/src/pages/InsightsPage.tsx`
+- `apps/admin/src/pages/PromotionsPage.tsx`
+- `apps/admin/src/pages/RewardSettingsPage.tsx`
+- `apps/admin/src/pages/SegmentsPage.tsx`
+- `apps/admin/src/pages/SizePresetsPage.tsx`
+- `apps/admin/src/pages/settings/SettingsPermissionsPage.tsx`
+- `apps/admin/src/pages/settings/SettingsRoleDetailPage.tsx`
+- `apps/admin/src/pages/settings/SettingsRolesPage.tsx`
+- `apps/admin/src/shared/ui/UserTierBadge.tsx`
+
+Docs:
+
+- `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`
+- `docs/ANSOR_MARKET_PROJECT_STATE.md`
+- `docs/ANSOR_MARKET_TODO.md`
+
+### Build/Test Status
+
+Run:
+
+```bash
+pnpm --filter admin build
+```
+
+Result:
+
+- Admin build passed.
+- Vite emitted the existing large chunk warning for the admin bundle.
+
+Not run in this checkpoint:
+
+```bash
+pnpm --filter api build
+pnpm --filter web build
+pnpm --filter api test
+pnpm --filter api test:e2e
+```
+
+### Known Issues
+
+- Admin customer Users and User Detail screens are refactored against the intended Ansor contracts, but live runtime still needs a backend smoke test because `apps/api/src/users/users.controller.ts` currently exposes `/users/me` and address/profile flows, not confirmed `/admin/users` list/detail endpoints.
+- Some inactive old Uzbek locale keys for coins, campaigns, brands, segments, roles, permissions, and size presets remain in `apps/admin/src/i18n/locales/uz.json`; they are no longer referenced by routed admin pages and should be removed in cleanup.
+- Internal names such as `parfumApi`, the `parfum` Mantine color token, and auth storage key remain for compatibility and should be renamed during final cleanup if desired.
+- Full end-to-end realtime behavior was not smoke-tested with running API/admin/web servers in this checkpoint.
+- API tests/e2e tests still need updates for the Ansor schema and contracts.
+
+### Next Exact Steps
+
+1. Start Phase 4 realtime/runtime verification.
+2. Verify or add active backend admin customer endpoints for `/admin/users` and `/admin/users/:id/details` if required by the admin Users screens.
+3. Start local API/admin/web servers and smoke-test:
+   - admin login
+   - admin dashboard
+   - product/category/measurement unit CRUD
+   - order status updates including `PREPARING`
+   - admin notification bell invalidation
+   - user order/status notifications
+   - broadcast creation/send
+   - inventory adjustment
+4. Run full build verification:
+   - `pnpm --filter api build`
+   - `pnpm --filter web build`
+   - `pnpm --filter admin build`
+5. Begin Phase 5 cleanup after runtime verification passes.
+
+### Next Exact Prompt
+
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-22 Phase 3 Admin Refactor checkpoint. Start Phase 4 realtime/runtime verification only: verify or add active backend admin customer endpoints needed by the refactored admin Users screens (`/admin/users`, `/admin/users/:id/details`), then smoke-test admin login, dashboard, product/category/measurement-unit CRUD, order status updates including `PREPARING`, admin notification bell invalidation, user order/status notifications, broadcast send, and inventory adjustment while preserving existing realtime patterns. Run `pnpm --filter api build`, `pnpm --filter web build`, and `pnpm --filter admin build`; update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.
 
 ## 2026-06-22 Phase 2 Telegram Mini App Checkpoint
 

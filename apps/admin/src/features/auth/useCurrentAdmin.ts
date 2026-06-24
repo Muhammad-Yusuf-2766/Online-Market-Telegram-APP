@@ -9,13 +9,11 @@ export function useCurrentAdmin() {
     skip: !token,
   });
 
-  const isSuperAdmin = Boolean(profile?.role?.isSuperAdmin);
-  const permissions = profile?.permissions ?? [];
+  const isSuperAdmin = Boolean(profile?.isSuperAdmin || profile?.role?.isSuperAdmin);
 
   const hasPermission = useMemo(() => {
-    const set = new Set(permissions);
-    return (key: string) => isSuperAdmin || set.has(key);
-  }, [isSuperAdmin, permissions]);
+    return (_key: string) => Boolean(profile?.isActive && isSuperAdmin);
+  }, [isSuperAdmin, profile?.isActive]);
 
   const isLoading = Boolean(token) && !profile && !isError;
 

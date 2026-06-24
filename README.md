@@ -1,6 +1,6 @@
-# Parfumbox
+# Ansor Market
 
-Parfumbox is a monorepo for a **Telegram Mini App** storefront, an **admin panel**, and a **NestJS API** (with Prisma and MinIO). The repository is organized as a workspace containing `apps/web`, `apps/admin`, and `apps/api` once scaffolded.
+Ansor Market is a monorepo for a **Telegram Mini App** halal market storefront in Korea, an **admin panel**, and a **NestJS API** with Prisma and MinIO.
 
 ## Documentation
 
@@ -16,7 +16,7 @@ Parfumbox is a monorepo for a **Telegram Mini App** storefront, an **admin panel
 
 ## Releases
 
-Version **1.0.0** is the current baseline. New versions are cut automatically via [release-please](https://github.com/googleapis/release-please) when Release PRs merge to `main`. See [docs/RELEASING.md](docs/RELEASING.md) and [GitHub Releases](https://github.com/asadulloh-pro/parfumbox/releases).
+Version **1.0.0** is the current baseline. New versions are cut automatically via [release-please](https://github.com/googleapis/release-please) when Release PRs merge to `main`. See [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Monorepo layout (target)
 
@@ -34,4 +34,4 @@ To expose the mini app over HTTPS for Telegram (after `ngrok config add-authtoke
 
 ## Next steps
 
-Follow the implementation roadmap: scaffold frontends and API, add Prisma schema and migrations, implement auth and CRUD, then wire RTK Query on both clients. See the linked docs for conventions and environment expectations.
+Follow the Ansor Market implementation roadmap in `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`. See the linked docs for conventions and environment expectations.

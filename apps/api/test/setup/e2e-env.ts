@@ -1,5 +1,5 @@
 const DEFAULT_TEST_DATABASE_URL =
-  "postgresql://postgres:postgres@localhost:5433/parfumbox_test?schema=public";
+  "postgresql://postgres:postgres@localhost:5433/ansor_market_test?schema=public";
 
 process.env.NODE_ENV = "test";
 process.env.DATABASE_URL = process.env.E2E_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;

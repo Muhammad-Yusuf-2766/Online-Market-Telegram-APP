@@ -1,322 +1,96 @@
-import {
-  Alert,
-  Button,
-  Group,
-  Loader,
-  Modal,
-  NumberInput,
-  PasswordInput,
-  Select,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Button, Group, Pagination, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  type TelegramUser,
-  type UserTier,
-  useAdjustUserCoinsMutation,
-  useGetUserReferralTreeQuery,
-  useGetUsersQuery,
-  useGiftUserCoinsMutation,
-} from '../app/parfumApi';
-import { AdminReferralTree } from '../features/referral-tree/AdminReferralTree';
-import { useListSearchParams } from '../shared/lib/useListSearchParams';
-import { paginationFromTotal } from '../shared/lib/serverPagination';
-import { TablePaginationFooter } from '../shared/ui/TablePaginationFooter';
-import { UserTierBadge } from '../shared/ui/UserTierBadge';
-import { formatPrice } from '../shared/lib/money';
+import { useGetUsersQuery } from '../app/parfumApi';
 
-const TIER_VALUES: UserTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM'];
+const PAGE_SIZE = 20;
 
 export function UsersPage() {
-  const { t } = useTranslation();
-  const { page, setPage, pageSize, setPageSize } = useListSearchParams(25);
   const [q, setQ] = useState('');
-  const [tier, setTier] = useState<UserTier | null>(null);
-
-  const { data, isLoading, error } = useGetUsersQuery({
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isFetching, isError } = useGetUsersQuery({
     page,
-    pageSize,
-    ...(q ? { q } : {}),
-    ...(tier ? { tier } : {}),
+    pageSize: PAGE_SIZE,
+    q: q || undefined,
   });
-  const [giftUser] = useGiftUserCoinsMutation();
-  const [adjustCoins] = useAdjustUserCoinsMutation();
-
-  const [giftOpen, setGiftOpen] = useState(false);
-  const [adjustOpen, setAdjustOpen] = useState(false);
-  const [treeOpen, setTreeOpen] = useState(false);
-  const [activeUser, setActiveUser] = useState<TelegramUser | null>(null);
-  const [treeUser, setTreeUser] = useState<TelegramUser | null>(null);
-  const treeMaxDepth = 5;
-  const {
-    data: referralRoot,
-    isLoading: treeLoading,
-    isError: treeError,
-  } = useGetUserReferralTreeQuery(
-    { userId: treeUser?.id ?? '', maxDepth: treeMaxDepth },
-    { skip: !treeUser?.id || !treeOpen },
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE)),
+    [data?.total],
   );
-
-  const [giftTitle, setGiftTitle] = useState('');
-  const [giftDescription, setGiftDescription] = useState('');
-  const [giftImageUrl, setGiftImageUrl] = useState('');
-  const [giftCoins, setGiftCoins] = useState(1);
-
-  const [adjPassword, setAdjPassword] = useState('');
-  const [adjDelta, setAdjDelta] = useState(0);
-  const [adjNote, setAdjNote] = useState('');
-
-  const total = data?.total ?? 0;
-  const { totalPages, rangeStart, rangeEnd, effectivePage } = paginationFromTotal(
-    total,
-    page,
-    pageSize,
-  );
-
-  useEffect(() => {
-    if (page !== effectivePage) setPage(effectivePage);
-  }, [page, effectivePage, setPage]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [q, tier, setPage]);
-
-  const rows = (data?.items ?? []).map((u) => (
-    <Table.Tr key={u.id}>
-      <Table.Td>
-        <Text size="sm" ff="monospace">
-          {u.telegramId}
-        </Text>
-      </Table.Td>
-      <Table.Td>{u.telegramUsername ?? '—'}</Table.Td>
-      <Table.Td>{[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}</Table.Td>
-      <Table.Td>
-        <UserTierBadge tier={u.tier} />
-      </Table.Td>
-      <Table.Td>{formatPrice(u.coinBalance)}</Table.Td>
-      <Table.Td>{u.phone ?? '—'}</Table.Td>
-      <Table.Td>{dayjs(u.createdAt).format('YYYY-MM-DD')}</Table.Td>
-      <Table.Td>
-        <Group gap="xs" wrap="nowrap">
-          <Button
-            size="xs"
-            variant="light"
-            onClick={() => {
-              setActiveUser(u);
-              setGiftTitle('');
-              setGiftDescription('');
-              setGiftImageUrl('');
-              setGiftCoins(1);
-              setGiftOpen(true);
-            }}
-          >
-            {t('users.gift')}
-          </Button>
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() => {
-              setActiveUser(u);
-              setAdjPassword('');
-              setAdjDelta(0);
-              setAdjNote('');
-              setAdjustOpen(true);
-            }}
-          >
-            {t('users.adjust')}
-          </Button>
-          <Button
-            size="xs"
-            variant="light"
-            color="teal"
-            onClick={() => {
-              setTreeUser(u);
-              setTreeOpen(true);
-            }}
-          >
-            {t('users.referralTree')}
-          </Button>
-          <Button component={Link} to={`/users/${u.id}`} size="xs" variant="subtle">
-            {t('users.viewProfile')}
-          </Button>
-        </Group>
-      </Table.Td>
-    </Table.Tr>
-  ));
 
   return (
     <Stack gap="md">
-      <Title order={2}>{t('users.title')}</Title>
-      <Text size="sm" c="dimmed">
-        {t('users.subtitle')}
-      </Text>
-
-      <Group align="flex-end" gap="sm" wrap="wrap">
-        <TextInput
-          label={t('users.search')}
-          value={q}
-          onChange={(e) => setQ(e.currentTarget.value)}
-          w={{ base: '100%', sm: 360 }}
-        />
-        <Select
-          label={t('users.filterTier')}
-          value={tier}
-          onChange={(v) => setTier((v as UserTier | null) ?? null)}
-          data={[
-            { value: '', label: t('users.filterAllTiers') },
-            ...TIER_VALUES.map((v) => ({
-              value: v,
-              label: t(`userTier.${v}` as const, v),
-            })),
-          ]}
-          clearable
-          w={200}
-        />
-        {q || tier ? (
-          <Button
-            variant="subtle"
-            onClick={() => {
-              setQ('');
-              setTier(null);
-            }}
-          >
-            {t('users.clearFilters')}
-          </Button>
-        ) : null}
+      <Group justify="space-between" align="flex-end">
+        <Stack gap={4}>
+          <Title order={2}>Users</Title>
+          <Text c="dimmed" size="sm">
+            Telegram users, saved addresses, order counts, wishlist, and cart activity.
+          </Text>
+        </Stack>
+        {isFetching ? <Text size="sm" c="dimmed">Refreshing...</Text> : null}
       </Group>
 
-      {error ? (
-        <Alert color="red" title={t('users.loadErrorTitle')}>
-          {t('users.loadErrorBody')}
-        </Alert>
-      ) : null}
-
-      {isLoading ? (
-        <Loader />
-      ) : (
-        <>
-          <Table striped highlightOnHover withTableBorder>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('users.colTelegramId')}</Table.Th>
-                <Table.Th>{t('users.colUsername')}</Table.Th>
-                <Table.Th>{t('users.colName')}</Table.Th>
-                <Table.Th>{t('users.colTier')}</Table.Th>
-                <Table.Th>{t('users.colCoins')}</Table.Th>
-                <Table.Th>{t('users.colPhone')}</Table.Th>
-                <Table.Th>{t('users.colJoined')}</Table.Th>
-                <Table.Th>{t('users.colActions')}</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>{rows}</Table.Tbody>
-          </Table>
-          {total > 0 ? (
-            <TablePaginationFooter
-              page={effectivePage}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              pageSize={pageSize}
-              onPageSizeChange={setPageSize}
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-              totalItems={total}
-            />
-          ) : null}
-        </>
-      )}
-
-      <Modal opened={giftOpen} onClose={() => setGiftOpen(false)} title={t('users.giftTitle')}>
-        {activeUser ? (
-          <Stack gap="sm">
-            <TextInput label={t('users.giftFieldTitle')} value={giftTitle} onChange={(e) => setGiftTitle(e.target.value)} />
-            <TextInput
-              label={t('users.giftFieldDescription')}
-              value={giftDescription}
-              onChange={(e) => setGiftDescription(e.target.value)}
-            />
-            <TextInput
-              label={t('users.giftFieldImage')}
-              value={giftImageUrl}
-              onChange={(e) => setGiftImageUrl(e.target.value)}
-            />
-            <NumberInput label={t('users.giftFieldCoins')} min={1} value={giftCoins} onChange={(v) => setGiftCoins(Number(v) || 1)} />
-            <Button
-              color="parfum"
-              onClick={() => {
-                if (!giftTitle.trim() || !activeUser) return;
-                void giftUser({
-                  userId: activeUser.id,
-                  title: giftTitle.trim(),
-                  description: giftDescription.trim(),
-                  imageUrl: giftImageUrl.trim(),
-                  coins: giftCoins,
-                }).then(() => setGiftOpen(false));
-              }}
-            >
-              {t('users.giftSend')}
-            </Button>
-          </Stack>
-        ) : null}
-      </Modal>
-
-      <Modal
-        opened={treeOpen}
-        onClose={() => {
-          setTreeOpen(false);
-          setTreeUser(null);
+      <TextInput
+        label="Search"
+        placeholder="Telegram ID, username, name, phone"
+        value={q}
+        onChange={(e) => {
+          setQ(e.currentTarget.value);
+          setPage(1);
         }}
-        title={treeUser ? t('users.referralTreeTitle', { id: treeUser.telegramId }) : t('users.referralTree')}
-        size="xl"
-      >
-        {treeLoading ? <Loader /> : null}
-        {treeError ? (
-          <Alert color="red" title={t('users.referralTreeErrorTitle')}>
-            {t('users.referralTreeErrorBody')}
-          </Alert>
-        ) : null}
-        {!treeLoading && !treeError && referralRoot ? (
-          <AdminReferralTree root={referralRoot} maxDepth={treeMaxDepth} />
-        ) : null}
-      </Modal>
+      />
 
-      <Modal opened={adjustOpen} onClose={() => setAdjustOpen(false)} title={t('users.adjustTitle')}>
-        {activeUser ? (
-          <Stack gap="sm">
-            <PasswordInput
-              label={t('users.adjustPassword')}
-              value={adjPassword}
-              onChange={(e) => setAdjPassword(e.target.value)}
-            />
-            <NumberInput
-              label={t('users.adjustDelta')}
-              value={adjDelta}
-              onChange={(v) => setAdjDelta(Number(v) || 0)}
-            />
-            <TextInput label={t('users.adjustNote')} value={adjNote} onChange={(e) => setAdjNote(e.target.value)} />
-            <Button
-              color="parfum"
-              onClick={() => {
-                if (!activeUser || !adjPassword) return;
-                void adjustCoins({
-                  userId: activeUser.id,
-                  password: adjPassword,
-                  deltaUzs: adjDelta,
-                  note: adjNote.trim() || undefined,
-                }).then(() => setAdjustOpen(false));
-              }}
-            >
-              {t('users.adjustSubmit')}
-            </Button>
-          </Stack>
-        ) : null}
-      </Modal>
+      <Paper withBorder radius="md" p="md">
+        {isError ? (
+          <Text c="red" size="sm">
+            User admin endpoints are not available from the current backend module.
+          </Text>
+        ) : isLoading ? (
+          <Text c="dimmed">Loading...</Text>
+        ) : (
+          <>
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>User</Table.Th>
+                  <Table.Th>Telegram</Table.Th>
+                  <Table.Th>Phone</Table.Th>
+                  <Table.Th>Addresses</Table.Th>
+                  <Table.Th>Orders</Table.Th>
+                  <Table.Th>Joined</Table.Th>
+                  <Table.Th />
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {(data?.items ?? []).map((user) => (
+                  <Table.Tr key={user.id}>
+                    <Table.Td>
+                      <Text fw={500}>{[user.firstName, user.lastName].filter(Boolean).join(' ') || '-'}</Text>
+                      <Text size="xs" c="dimmed">
+                        {user.telegramUsername ? `@${user.telegramUsername}` : user.id}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>{user.telegramId}</Table.Td>
+                    <Table.Td>{user.phone ?? '-'}</Table.Td>
+                    <Table.Td>{user._count?.addresses ?? user.addresses?.length ?? '-'}</Table.Td>
+                    <Table.Td>{user._count?.orders ?? '-'}</Table.Td>
+                    <Table.Td>{dayjs(user.createdAt).format('DD.MM.YYYY')}</Table.Td>
+                    <Table.Td ta="right">
+                      <Button component={Link} to={`/users/${user.id}`} size="xs" variant="light" color="parfum">
+                        Details
+                      </Button>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+            <Group justify="center" mt="md">
+              <Pagination total={totalPages} value={page} onChange={setPage} />
+            </Group>
+          </>
+        )}
+      </Paper>
     </Stack>
   );
 }

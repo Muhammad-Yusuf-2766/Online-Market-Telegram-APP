@@ -12,10 +12,10 @@ export default defineConfig({
     host: true,
     allowedHosts: true,
     proxy: {
-      '/_parfumbox-api': {
+      '/_ansor-api': {
         target: 'http://127.0.0.1:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/_parfumbox-api/, '') || '/',
+        rewrite: (path) => path.replace(/^\/_ansor-api/, '') || '/',
         ws: true,
       },
     },

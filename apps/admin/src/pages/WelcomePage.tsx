@@ -19,17 +19,17 @@ import { AdminProfileSummary } from '../shared/ui/AdminProfileSummary';
 
 export function WelcomePage() {
   const { t } = useTranslation();
-  const { profile, hasPermission, isSuperAdmin } = useCurrentAdmin();
+  const { profile, isSuperAdmin } = useCurrentAdmin();
 
   const quickLinks = useMemo(() => {
     if (!profile) return [];
-    const sections = filterNavSections(getAdminNavSections(t), hasPermission);
+    const sections = filterNavSections(getAdminNavSections(t));
     return sections.flatMap((section) =>
       section.items
         .filter((item) => item.to !== '/welcome')
         .map((item) => ({ ...item, sectionTitle: section.title })),
     );
-  }, [profile, hasPermission, t]);
+  }, [profile, t]);
 
   if (!profile) {
     return null;

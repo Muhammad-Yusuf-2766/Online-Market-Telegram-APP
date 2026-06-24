@@ -25,9 +25,9 @@ describe("CategoriesService", () => {
 
   it("creates category with normalized slug", async () => {
     prisma.category.create.mockResolvedValue({ id: "c1" } as never);
-    await service.create({ slug: "  Perfumes ", name: "  Perfumes " });
+    await service.create({ slug: "  pantry ", name: "  Pantry " });
     expect(prisma.category.create).toHaveBeenCalledWith({
-      data: { slug: "perfumes", name: "Perfumes", parentId: null, sortOrder: 0 },
+      data: { slug: "pantry", name: "Pantry", parentId: null, sortOrder: 0 },
     });
   });
 });

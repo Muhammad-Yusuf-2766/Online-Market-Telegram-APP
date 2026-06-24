@@ -7,7 +7,7 @@ const API_ROOT = join(__dirname, "..", "..");
 let migrated = false;
 
 const DEFAULT_TEST_DATABASE_URL =
-  "postgresql://postgres:postgres@localhost:5433/parfumbox_test?schema=public";
+  "postgresql://postgres:postgres@localhost:5433/ansor_market_test?schema=public";
 
 export function getTestDatabaseUrl(): string {
   return process.env.E2E_DATABASE_URL ?? process.env.DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;

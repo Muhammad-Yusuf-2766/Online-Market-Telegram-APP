@@ -1,4 +1,4 @@
-# Parfumbox stack: Postgres + MinIO + API + Telegram mini app (web) + Admin panel.
+# Ansor Market stack: Postgres + MinIO + API + Telegram mini app (web) + Admin panel.
 # Usage (from repo root): docker compose up --build
 #
 # Railway.com: use railway/README.md (separate Postgres + per-service Docker builds).
@@ -20,9 +20,9 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: parfumbox
+      POSTGRES_DB: ansor_market
     volumes:
-      - parfumbox_pg:/var/lib/postgresql/data
+      - ansor_market_pg:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
@@ -39,7 +39,7 @@ services:
       - '9000:9000'
       - '9001:9001'
     volumes:
-      - parfumbox_minio:/data
+      - ansor_market_minio:/data
     healthcheck:
       test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1']
       interval: 5s
@@ -53,7 +53,7 @@ services:
       minio:
         condition: service_healthy
     environment:
-      MINIO_BUCKET: ${MINIO_BUCKET:-parfumbox}
+      MINIO_BUCKET: ${MINIO_BUCKET:-ansor-market}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     entrypoint:
@@ -79,7 +79,7 @@ services:
     ports:
       - '3000:3000'
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/parfumbox?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/ansor_market?schema=public
       NODE_ENV: production
       PORT: '3000'
       JWT_SECRET: ${JWT_SECRET:-change-me-user-jwt-docker}
@@ -95,7 +95,7 @@ services:
       MINIO_USE_SSL: 'false'
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      MINIO_BUCKET: ${MINIO_BUCKET:-parfumbox}
+      MINIO_BUCKET: ${MINIO_BUCKET:-ansor-market}
       MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
       MINIO_PRESIGN_EXPIRES_SEC: '3600'
     depends_on:
@@ -127,5 +127,5 @@ services:
       - api
 
 volumes:
-  parfumbox_pg:
-  parfumbox_minio:
+  ansor_market_pg:
+  ansor_market_minio:

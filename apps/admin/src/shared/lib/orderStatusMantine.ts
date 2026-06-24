@@ -10,6 +10,7 @@ import type { OrderStatus } from '../../app/parfumApi';
 export const ORDER_STATUS_MANTINE_COLOR: Record<OrderStatus, MantineColor> = {
   PENDING: 'yellow',
   CONFIRMED: 'blue',
+  PREPARING: 'cyan',
   SHIPPED: 'violet',
   DELIVERED: 'green',
   CANCELLED: 'red',

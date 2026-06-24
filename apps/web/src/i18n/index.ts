@@ -2,7 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import uz from './locales/uz.json';
 
-export const I18N_STORAGE_KEY = 'parfumbox.lang';
+export const I18N_STORAGE_KEY = 'ansorMarket.lang';
 export const LANGUAGES = ['uz'] as const;
 export type AppLang = (typeof LANGUAGES)[number];
 

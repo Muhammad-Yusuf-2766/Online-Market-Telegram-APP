@@ -11,10 +11,10 @@ import { normalizePaginated } from './paginationNormalize';
 export function getParfumApiBaseUrl(): string {
   const fromEnv = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
   if (fromEnv) return fromEnv;
-  if (import.meta.env.DEV) return '/_parfumbox-api';
+  if (import.meta.env.DEV) return '/_ansor-api';
   if (typeof window !== 'undefined') {
     console.warn(
-      '[parfumApi] VITE_API_BASE_URL was not set at build time. Falling back to same-origin requests.',
+      '[ansorApi] VITE_API_BASE_URL was not set at build time. Falling back to same-origin requests.',
     );
   }
   return '';

@@ -21,13 +21,13 @@ import { useAdminOrdersRealtime } from '../features/orders/useAdminOrdersRealtim
 export function AdminLayout() {
   useAdminOrdersRealtime();
   const { t } = useTranslation();
-  const { hasPermission, profile } = useCurrentAdmin();
+  const { profile } = useCurrentAdmin();
   const [opened, { toggle }] = useDisclosure();
   const isMobile = useMediaQuery('(max-width: 47.99em)');
 
   const navSections = useMemo(
-    () => filterNavSections(getAdminNavSections(t), hasPermission),
-    [hasPermission, t],
+    () => filterNavSections(getAdminNavSections(t)),
+    [t],
   );
 
   return (

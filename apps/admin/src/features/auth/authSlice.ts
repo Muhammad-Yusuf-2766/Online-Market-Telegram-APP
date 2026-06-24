@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-const STORAGE_KEY = 'parfumbox_admin_token';
+const STORAGE_KEY = 'ansor_market_admin_token';
 
 function readStoredToken(): string | null {
   try {
@@ -15,6 +15,7 @@ export type AdminProfile = {
   email: string;
   fullName: string | null;
   isActive: boolean;
+  isSuperAdmin: boolean;
   role: {
     id: string;
     key: string;

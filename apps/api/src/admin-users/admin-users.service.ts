@@ -1,21 +1,60 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Prisma, User, UserTier } from "@prisma/client";
+import type { Order, OrderItem, Prisma, Product, User, UserAddress, Wishlist } from "@prisma/client";
 import type { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { paginationParams, toPaginatedResult, type PaginatedResult } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
-import type { ReferralTreeNode } from "../users/users.service";
-import { UsersService } from "../users/users.service";
+
+export type AdminCustomerRow = User & {
+  addresses: UserAddress[];
+  _count: {
+    addresses: number;
+    orders: number;
+    wishlistItems: number;
+  };
+};
+
+type CustomerOrder = Order & {
+  items: OrderItem[];
+};
+
+type WishlistWithProduct = Wishlist & {
+  product: Pick<Product, "id" | "title" | "priceKrw" | "images">;
+};
+
+type CartItemWithProduct = {
+  id: string;
+  qty: number;
+  product: Pick<Product, "id" | "title" | "priceKrw" | "images">;
+};
+
+export type AdminCustomerDetail = {
+  user: User;
+  addresses: UserAddress[];
+  orders: CustomerOrder[];
+  wishlistItems: WishlistWithProduct[];
+  cartItems: CartItemWithProduct[];
+  kpis: {
+    orderCount: number;
+    pendingOrders: number;
+    deliveredOrders: number;
+    cancelledOrders: number;
+    totalSpentKrw: number;
+    averageOrderValueKrw: number;
+    wishlistCount: number;
+    cartItemCount: number;
+    addressCount: number;
+    reviewsCount: number;
+    lastOrderAt: Date | null;
+  };
+};
 
 @Injectable()
 export class AdminUsersService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly usersService: UsersService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAllPaginated(
-    query: PaginationQueryDto & { q?: string; tier?: UserTier },
-  ): Promise<PaginatedResult<User>> {
+    query: PaginationQueryDto & { q?: string },
+  ): Promise<PaginatedResult<AdminCustomerRow>> {
     const { page, pageSize, skip } = paginationParams(query);
     const where: Prisma.UserWhereInput = {};
     const trimmedQ = query.q?.trim();
@@ -28,9 +67,6 @@ export class AdminUsersService {
         { phone: { contains: trimmedQ } },
       ];
     }
-    if (query.tier) {
-      where.tier = query.tier;
-    }
     const [total, items] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
@@ -38,75 +74,91 @@ export class AdminUsersService {
         orderBy: { createdAt: "desc" },
         skip,
         take: pageSize,
+        include: {
+          addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }], take: 3 },
+          _count: {
+            select: {
+              addresses: true,
+              orders: true,
+              wishlistItems: true,
+            },
+          },
+        },
       }),
     ]);
     return toPaginatedResult(items, total, page, pageSize);
   }
 
-  async getReferralTree(userId: string, maxDepth: number): Promise<ReferralTreeNode> {
-    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
-    if (!u) {
-      throw new NotFoundException("User not found");
-    }
-    return this.usersService.getReferralTree(userId, maxDepth);
-  }
-
-  async getUser360(userId: string) {
+  async getUser360(userId: string): Promise<AdminCustomerDetail> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
+        addresses: {
+          orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+        },
         orders: {
+          include: { items: true },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        },
+        wishlistItems: {
+          include: { product: { select: { id: true, title: true, priceKrw: true, images: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        },
+        cart: {
           include: {
-            items: true,
-            promoCode: { select: { code: true, kind: true, value: true } },
+            items: {
+              include: { product: { select: { id: true, title: true, priceKrw: true, images: true } } },
+              orderBy: { createdAt: "desc" },
+            },
           },
-          orderBy: { createdAt: "desc" },
-          take: 50,
         },
-        coinLedger: { orderBy: { createdAt: "desc" }, take: 100 },
-        wishlistItems: { include: { product: true }, take: 100 },
-        segmentMemberships: { include: { segment: true } },
-        broadcastLogs: { include: { broadcast: true }, orderBy: { createdAt: "desc" }, take: 100 },
-        adminCoinGifts: { orderBy: { createdAt: "desc" }, take: 100 },
-        productFeedbacks: { include: { product: { select: { title: true } } }, orderBy: { createdAt: "desc" }, take: 50 },
-        referralRewardsAsReferrer: {
-          include: { referee: { select: { id: true, firstName: true, lastName: true, telegramUsername: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 50,
+        productFeedbacks: { select: { id: true } },
+        _count: {
+          select: {
+            orders: true,
+            wishlistItems: true,
+            addresses: true,
+            productFeedbacks: true,
+          },
         },
-        referralRewardAsReferee: true,
-        referredBy: { select: { id: true, firstName: true, lastName: true, telegramUsername: true } },
-        campaign: { select: { id: true, slug: true, name: true } },
-        promoRedemptions: {
-          include: { promoCode: { select: { code: true, kind: true, value: true } } },
-          orderBy: { redeemedAt: "desc" },
-          take: 50,
-        },
-        cart: { include: { items: { include: { product: { select: { title: true, priceUzs: true } } } } } },
-        _count: { select: { orders: true, referrals: true, wishlistItems: true } },
       },
     });
     if (!user) throw new NotFoundException("User not found");
-    const totalRevenue = user.orders.reduce((acc, order) => acc + order.cashPaidUzs + order.coinsAppliedUzs, 0);
+    const paidOrders = user.orders.filter((order) => order.status !== "CANCELLED");
+    const totalSpentKrw = paidOrders.reduce((acc, order) => acc + order.totalKrw, 0);
+    const pendingOrders = user.orders.filter((o) => o.status === "PENDING").length;
     const cancelledOrders = user.orders.filter((o) => o.status === "CANCELLED").length;
     const deliveredOrders = user.orders.filter((o) => o.status === "DELIVERED").length;
     const lastOrder = user.orders[0]?.createdAt ?? null;
+    const {
+      addresses,
+      orders,
+      wishlistItems,
+      cart,
+      productFeedbacks: _productFeedbacks,
+      _count,
+      ...userProfile
+    } = user;
+
     return {
-      user,
+      user: userProfile,
+      addresses,
+      orders,
+      wishlistItems,
+      cartItems: cart?.items ?? [],
       kpis: {
-        ordersCount: user._count.orders,
+        orderCount: _count.orders,
+        pendingOrders,
         deliveredOrders,
         cancelledOrders,
-        ltvUzs: totalRevenue,
-        aovUzs: user.orders.length > 0 ? Math.round(totalRevenue / user.orders.length) : 0,
-        referralCount: user._count.referrals,
-        wishlistCount: user._count.wishlistItems,
-        coinsLifetimeEarned: user.coinLedger
-          .filter((l) => l.delta > 0)
-          .reduce((acc, l) => acc + l.delta, 0),
-        coinsLifetimeSpent: user.coinLedger
-          .filter((l) => l.delta < 0)
-          .reduce((acc, l) => acc + Math.abs(l.delta), 0),
+        totalSpentKrw,
+        averageOrderValueKrw: paidOrders.length > 0 ? Math.round(totalSpentKrw / paidOrders.length) : 0,
+        wishlistCount: _count.wishlistItems,
+        cartItemCount: cart?.items.length ?? 0,
+        addressCount: _count.addresses,
+        reviewsCount: _count.productFeedbacks,
         lastOrderAt: lastOrder,
       },
     };

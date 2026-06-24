@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { trackEvent } from '../../shared/lib/analytics';
 
-const STORAGE_KEY = 'pb_cart';
+const STORAGE_KEY = 'ansor_market_cart';
 const DEFAULT_CART_UNIT_ID = 'default';
 
 function cartLineKey(productId: string): string {
@@ -36,8 +36,6 @@ function parseCartLine(raw: unknown): CartLine | null {
   let unitPriceKrw: number;
   if (typeof o.unitPriceKrw === 'number') {
     unitPriceKrw = o.unitPriceKrw;
-  } else if (typeof o.unitPriceUzs === 'number') {
-    unitPriceKrw = o.unitPriceUzs;
   } else if (typeof (o as { unitPriceCents?: number }).unitPriceCents === 'number') {
     unitPriceKrw = Math.round((o as { unitPriceCents: number }).unitPriceCents / 100);
   } else {
@@ -56,8 +54,6 @@ function parseCartLine(raw: unknown): CartLine | null {
       ? null
       : typeof o.unitLabel === 'string'
         ? o.unitLabel
-        : typeof o.sizeLabel === 'string'
-          ? o.sizeLabel
         : null;
   const imageUrl =
     o.imageUrl === null || typeof o.imageUrl === 'string'

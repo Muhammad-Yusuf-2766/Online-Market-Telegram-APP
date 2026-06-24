@@ -36,6 +36,16 @@ export class AdminNotificationsController {
     return this.notifications.markRead(admin.id, id);
   }
 
+  @Post(":id/read")
+  @ApiOperation({ summary: "Mark one notification as read" })
+  @ApiOkResponse({ description: "Marked" })
+  async postMarkRead(
+    @CurrentAdmin() admin: AdminUser,
+    @Param("id") id: string,
+  ): Promise<{ ok: true }> {
+    return this.notifications.markRead(admin.id, id);
+  }
+
   @Post("read-all")
   @ApiOperation({ summary: "Mark all notifications as read" })
   @ApiOkResponse({ description: "Count of new read records created" })

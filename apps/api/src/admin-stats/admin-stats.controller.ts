@@ -22,6 +22,13 @@ export class AdminStatsController {
     return this.stats.getDashboardStats(query.from, query.to);
   }
 
+  @Get("dashboard")
+  @ApiOperation({ summary: "Dashboard KPIs and daily series for the selected UTC date range" })
+  @ApiOkResponse({ description: "Totals and per-day orders / new users" })
+  async dashboardAlias(@Query() query: DashboardStatsQueryDto): Promise<DashboardStatsResult> {
+    return this.stats.getDashboardStats(query.from, query.to);
+  }
+
   @Get("overview")
   @ApiOperation({ summary: "Snapshot KPIs across users, orders, catalog, inventory" })
   @ApiOkResponse()

@@ -6,6 +6,7 @@ import { AdminAuthModule } from "./admin-auth/admin-auth.module";
 import { AdminFinanceModule } from "./admin-finance/admin-finance.module";
 import { AdminSettingsModule } from "./admin-settings/admin-settings.module";
 import { AdminStatsModule } from "./admin-stats/admin-stats.module";
+import { AdminUsersModule } from "./admin-users/admin-users.module";
 import { AuthModule } from "./auth/auth.module";
 import { BannersModule } from "./banners/banners.module";
 import { BroadcastsModule } from "./broadcasts/broadcasts.module";
@@ -43,6 +44,7 @@ import { WishlistModule } from "./wishlist/wishlist.module";
     ProductsModule,
     OrdersModule,
     InventoryModule,
+    AdminUsersModule,
     AdminStatsModule,
     AdminFinanceModule,
     BroadcastsModule,

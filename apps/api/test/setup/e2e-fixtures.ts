@@ -3,11 +3,6 @@ import { PrismaClient } from "@prisma/client";
 
 export async function seedE2eAdmin(prisma: PrismaClient) {
   const passwordHash = await bcrypt.hash("test-admin-pass", 10);
-  const role = await prisma.role.upsert({
-    where: { key: "super_admin" },
-    create: { key: "super_admin", name: "Super Admin", isSuperAdmin: true },
-    update: {},
-  });
   return prisma.adminUser.upsert({
     where: { email: "e2e-admin@test.local" },
     create: {
@@ -15,9 +10,9 @@ export async function seedE2eAdmin(prisma: PrismaClient) {
       passwordHash,
       fullName: "E2E Admin",
       isActive: true,
-      roleId: role.id,
+      isSuperAdmin: true,
     },
-    update: { passwordHash, isActive: true, roleId: role.id },
+    update: { passwordHash, isActive: true, isSuperAdmin: true },
   });
 }
 
@@ -30,16 +25,25 @@ export async function seedE2eUser(prisma: PrismaClient, telegramId = "e2e-user-1
 }
 
 export async function seedE2eProduct(prisma: PrismaClient) {
+  const unit = await prisma.measurementUnit.upsert({
+    where: { slug: "piece" },
+    create: { slug: "piece", name: "Piece", symbol: "pc", sortOrder: 0 },
+    update: {},
+  });
+  const category = await prisma.category.upsert({
+    where: { slug: "pantry" },
+    create: { slug: "pantry", name: "Pantry", sortOrder: 0 },
+    update: {},
+  });
   return prisma.product.create({
     data: {
-      title: "E2E Test Perfume",
+      title: "E2E Test Halal Product",
       description: "Test product for e2e",
-      priceUzs: 150000,
+      priceKrw: 15000,
       images: [],
-      stock: 100,
-      notesTop: [],
-      notesHeart: [],
-      notesBase: [],
+      stockQuantity: 100,
+      categoryId: category.id,
+      measurementUnitId: unit.id,
     },
   });
 }

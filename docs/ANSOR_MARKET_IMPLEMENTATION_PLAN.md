@@ -1,6 +1,6 @@
 # Ansor Market Implementation Plan
 
-Last updated: 2026-06-22
+Last updated: 2026-06-24
 
 ## Current Baseline
 
@@ -17,7 +17,24 @@ The main refactor should preserve these patterns and remove only the perfume/rew
 - 2026-06-22: Phase 1 backend schema/API compile checkpoint completed.
 - 2026-06-22: API seed and fresh baseline migration readiness completed.
 - 2026-06-22: Phase 2 Telegram Mini App refactor completed and `pnpm --filter web build` passed.
-- Next: Phase 3 admin panel refactor.
+- 2026-06-22: Phase 3 admin panel refactor completed and `pnpm --filter admin build` passed.
+- 2026-06-23: Phase 4 backend/admin runtime verification checkpoint completed:
+  - active `/admin/users` and `/admin/users/:userId/details` backend endpoints are now imported into the active API graph
+  - stale admin customer endpoints were refactored away from RBAC, tiers, referrals, coins, promos, and UZS fields
+  - admin dashboard stats alias `/admin/stats/dashboard` was added to match the refactored admin RTK Query contract
+  - admin notification read now supports the frontend `POST /admin/notifications/:id/read` call while retaining the existing PATCH endpoint
+  - API build output is now cleaned before build and non-incremental so `dist/main.js` contains all active runtime dependencies
+  - route-level runtime smoke confirmed mappings for admin users, dashboard, notification read, order status, broadcast send, and inventory adjustment
+  - full live CRUD/status/broadcast smoke testing was blocked by local DB availability: Docker Desktop engine was stopped and the local PostgreSQL process rejected the default `postgres:postgres` credentials
+- 2026-06-24: Phase 4 live smoke remained blocked by local database availability, then Phase 5 cleanup completed:
+  - `apps/api/.env` was still absent
+  - Docker test Postgres could not start because Docker Desktop Linux engine was unavailable at `//./pipe/dockerDesktopLinuxEngine`
+  - `pnpm --filter api db:migrate` and `pnpm --filter api db:seed` were not run because no reachable database existed
+  - inactive legacy backend modules/files were removed from disk
+  - stale visible/source Parfumbox, perfume, UZS, coin, referral, campaign, segment, automation, reward, brand, fragrance, size-preset, and RBAC cleanup was completed for active source/env examples/README
+  - active-source grep now only finds removed terminology in historical Prisma migration files
+  - `pnpm install`, `pnpm --filter api build`, `pnpm --filter web build`, and `pnpm --filter admin build` passed
+- Next: restore a reachable Ansor database and run the full live Phase 4 smoke tests.
 
 ## Phase 1 - Backend Schema and APIs
 
@@ -403,22 +420,32 @@ Changes:
   - optionally send Telegram bot message if existing bot integration supports it.
 - Remove coin gift notification branches from Telegram notify service.
 
+2026-06-23 verification notes:
+
+- `/admin` and `/user` gateway code still follows the existing Socket.IO pattern.
+- `OrderEventsService` still emits admin `orders:changed`, admin `notifications:new`, user `order:update`, and user `product:stock`.
+- Refactored admin `useAdminOrdersRealtime` still invalidates `Order`, `Stats`, and `Notification` tags from socket events.
+- `OrdersService.updateStatus` supports `PREPARING`, creates `ORDER_STATUS` user notifications, sends Telegram status messages, emits user order events, and invalidates admin realtime consumers through the existing order event service.
+- `BroadcastsService.sendNow` creates `BROADCAST` user notifications for active users and keeps the existing Telegram send attempt path.
+- Full live socket/event verification still requires a reachable database with migrated Ansor schema and seeded users/orders/admin.
+
 ## Phase 5 - Cleanup
 
 Cleanup should happen after functional replacements compile.
 
 Remove:
 
-- API modules and tests for coins, referrals, rewards, campaigns, segments, automations, brands, fragrance families, perfume recommendations, size presets if replaced.
-- Web routes/components/styles for coins and coin inbox.
-- Admin pages/routes/nav/i18n for removed modules.
-- `parfumbox`, `parfum`, `Aromus`, `UZS`, `priceUzs`, `stockGrams`, perfume copy from visible UI and API contracts.
+- API modules and tests for coins, referrals, rewards, campaigns, segments, automations, brands, fragrance families, perfume recommendations, size presets if replaced. Completed for inactive backend source on 2026-06-24.
+- Web routes/components/styles for coins and coin inbox. Completed in Phase 2; remaining stale locale/cart fallback cleanup completed on 2026-06-24.
+- Admin pages/routes/nav/i18n for removed modules. Routed pages were removed in Phase 3; stale admin locale keys were trimmed on 2026-06-24.
+- `parfumbox`, `parfum`, `Aromus`, `UZS`, `priceUzs`, `stockGrams`, perfume copy from visible UI and API contracts. Active source/env examples/README were cleaned on 2026-06-24; historical Prisma migrations intentionally retain old terms.
 
 Rename carefully:
 
-- Internal `parfumApi` can be renamed late to reduce churn.
-- Money helpers should format KRW.
-- Env examples and docs should use Ansor Market naming.
+- Internal `parfumApi` remains as a compatibility implementation name to reduce churn; it is not visible UI copy.
+- The Mantine `parfum` color token remains as an internal theme token unless a low-risk rename is explicitly scheduled.
+- Money helpers format KRW.
+- Env examples and README use Ansor Market naming.
 
 ## Phase 6 - Build and Typecheck Verification
 

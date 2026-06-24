@@ -11,7 +11,7 @@ export class StorageService {
   private readonly publicBase: string;
 
   constructor(private readonly config: ConfigService) {
-    this.bucket = this.config.get<string>("MINIO_BUCKET") ?? "parfumbox";
+    this.bucket = this.config.get<string>("MINIO_BUCKET") ?? "ansor-market";
     const endpoint = this.config.get<string>("MINIO_ENDPOINT") ?? "http://127.0.0.1";
     const port = this.config.get<string>("MINIO_PORT") ?? "9000";
     this.publicBase = (this.config.get<string>("MINIO_PUBLIC_URL") ?? `${endpoint}:${port}`).replace(/\/$/, "");

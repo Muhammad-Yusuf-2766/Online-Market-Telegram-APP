@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 const SOUND_URL = '/sounds/notification.mp3';
-const MUTE_STORAGE_KEY = 'parfumbox.admin.notificationSound.muted';
+const MUTE_STORAGE_KEY = 'ansorMarket.admin.notificationSound.muted';
 
 let audio: HTMLAudioElement | null = null;
 

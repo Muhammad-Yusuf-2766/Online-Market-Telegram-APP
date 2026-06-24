@@ -1,255 +1,129 @@
-import { createApi, fetchBaseQuery, type BaseQueryFn } from '@reduxjs/toolkit/query/react';
-import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
-import { logout, setProfile, type AdminProfile } from '../features/auth/authSlice';
-import { getParfumApiBaseUrl } from './apiBase';
-import { normalizePaginated, type PaginatedResult } from './paginationNormalize';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { RootState } from './store';
+import { setCredentials, setProfile } from '../features/auth/authSlice';
 
-const baseUrl = getParfumApiBaseUrl();
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3000';
 
-const rawBaseQuery = fetchBaseQuery({
-  baseUrl,
-  prepareHeaders: (headers, { getState }) => {
-    const token = (getState() as { auth: { accessToken: string | null } }).auth
-      .accessToken;
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    return headers;
-  },
-});
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
-const baseQueryWithAuth: BaseQueryFn = async (args, api, extraOptions) => {
-  const hadToken = Boolean(
-    (api.getState() as { auth: { accessToken: string | null } }).auth.accessToken,
-  );
-  const result = await rawBaseQuery(args, api, extraOptions);
-  const err = result.error as FetchBaseQueryError | undefined;
-  if (err && err.status === 401 && hadToken) {
-    api.dispatch(logout());
-    api.dispatch(parfumApi.util.resetApiState());
+function normalizePaginated<T>(
+  value: Paginated<T> | T[] | undefined,
+  page = 1,
+  pageSize = 20,
+): Paginated<T> {
+  if (Array.isArray(value)) {
+    return { items: value, total: value.length, page, pageSize };
   }
-  return result;
-};
+  return value ?? { items: [], total: 0, page, pageSize };
+}
 
-export type LoginResponse = {
-  accessToken: string;
-  expiresIn: number;
-};
-
-export type PermissionRow = {
-  id: string;
-  key: string;
-  name: string;
-  description: string | null;
-  isSystem: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type RoleRow = {
-  id: string;
-  key: string;
-  name: string;
-  description: string | null;
-  isSystem: boolean;
-  isSuperAdmin: boolean;
-  memberCount: number;
-  permissionCount?: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type RoleDetail = RoleRow & {
-  permissions: PermissionRow[];
-};
-
-export type AdminPanelUserRow = {
+export type AdminProfile = {
   id: string;
   email: string;
   fullName: string | null;
   isActive: boolean;
+  isSuperAdmin: boolean;
   role: {
     id: string;
     key: string;
     name: string;
     isSuperAdmin: boolean;
   } | null;
-  directPermissionCount: number;
-  createdAt: string;
-  updatedAt: string;
+  permissions: string[];
 };
 
-export type AdminPanelUserDetail = {
-  id: string;
-  email: string;
-  fullName: string | null;
-  isActive: boolean;
-  role: (RoleRow & { permissions: PermissionRow[] }) | null;
-  directPermissions: PermissionRow[];
-  createdAt: string;
-  updatedAt: string;
+export type LoginResponse = {
+  accessToken: string;
+  admin: AdminProfile;
 };
 
-export type DashboardStats = {
-  totals: {
-    productCount: number;
-    ordersInRange: number;
-    newUsersInRange: number;
-    cashNonCancelledUzs: number;
-    coinsAppliedNonCancelledUzs: number;
-    cancelledOrdersInRange: number;
-    campaignSignupsInRange: number;
-  };
-  series: Array<{
-    date: string;
-    orders: number;
-    newUsers: number;
-    cashNonCancelledUzs: number;
-    coinsAppliedNonCancelledUzs: number;
-    cancelledOrderCount: number;
-    campaignSignups: number;
-  }>;
-};
-
-export type InsightsFunnel = {
-  fromIso: string;
-  toIso: string;
-  steps: Array<{
-    key: string;
-    label: string;
-    value: number;
-    conversionFromPrev: number | null;
-  }>;
-};
-
-export type InsightsAovLtv = {
-  ordersCount: number;
-  paidOrdersCount: number;
-  revenueUzs: number;
-  aovUzs: number;
-  ltvUzs: number;
-  repeatPurchaseRate: number;
-};
-
-export type InsightsTopProduct = {
-  productId: string;
-  title: string;
-  value: number;
-};
-
-export type InsightsSearchTerm = {
-  query: string;
-  count: number;
-  zeroResultCount: number;
-};
-
-export type SizePreset = {
+export type CategoryRow = {
   id: string;
   slug: string;
-  label: string;
-  grams: number;
-  sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
+  name: string;
+  description?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-export type ProductSizeOption = {
+export type MeasurementUnit = {
   id: string;
-  presetId: string;
-  label: string;
-  grams: number;
-  priceUzs: number;
+  slug: string;
+  name: string;
+  symbol: string;
+  sortOrder: number;
+  allowDecimal: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
-
-export type ProductGender = 'MEN' | 'WOMEN' | 'UNISEX';
 
 export type Product = {
   id: string;
   title: string;
-  description: string;
-  priceUzs: number;
-  sizes: ProductSizeOption[] | null;
-  images: string[];
-  stock: number | null;
-  stockGrams: number | null;
-  maxUnitsBySizeId?: Record<string, number> | null;
-  lowStockGramsThreshold: number | null;
-  categoryId: string | null;
-  brandId: string | null;
-  familyId: string | null;
-  gender: ProductGender;
-  notesTop: string[];
-  notesHeart: string[];
-  notesBase: string[];
-  isBestseller: boolean;
-  isNewArrival: boolean;
-  releaseYear: number | null;
-  oldPriceUzs: number | null;
+  description: string | null;
+  priceKrw: number;
+  oldPriceKrw: number | null;
   discountPercent: number | null;
-  lowStockThreshold: number | null;
-  ratingAvg: number | null;
+  isOnSale: boolean;
+  isBestSeller: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  images: string[];
+  ratingAvg: number;
   ratingCount: number;
+  isActive: boolean;
+  categoryId: string;
+  measurementUnitId: string;
+  category?: CategoryRow | null;
+  measurementUnit?: MeasurementUnit | null;
   createdAt: string;
   updatedAt: string;
 };
 
 export type ProductListFilters = {
+  page?: number;
+  pageSize?: number;
   q?: string;
-  sort?:
-    | 'newest'
-    | 'price_asc'
-    | 'price_desc'
-    | 'title_asc'
-    | 'title_desc'
-    | 'rating_asc'
-    | 'rating_desc'
-    | 'bestselling';
-  brandIds?: string[];
-  categoryIds?: string[];
-  familyIds?: string[];
-  gender?: ProductGender;
-  priceMin?: number;
-  priceMax?: number;
-  bestseller?: boolean;
-  newArrival?: boolean;
-  discounted?: boolean;
-  inStockOnly?: boolean;
+  categoryId?: string;
+  isActive?: boolean;
+  isOnSale?: boolean;
+  isBestSeller?: boolean;
+  sort?: string;
 };
 
 export type ProductWritePayload = {
   title: string;
-  description?: string;
-  priceUzs: number;
-  sizes?: Array<{ presetId: string; priceUzs: number }>;
-  images?: string[];
-  stock?: number | null;
-  stockGrams?: number | null;
-  lowStockGramsThreshold?: number | null;
-  categoryId?: string | null;
-  brandId?: string | null;
-  familyId?: string | null;
-  gender?: ProductGender;
-  notesTop?: string[];
-  notesHeart?: string[];
-  notesBase?: string[];
-  isBestseller?: boolean;
-  isNewArrival?: boolean;
-  releaseYear?: number | null;
-  oldPriceUzs?: number | null;
+  description?: string | null;
+  priceKrw: number;
+  oldPriceKrw?: number | null;
   discountPercent?: number | null;
-  lowStockThreshold?: number | null;
+  isOnSale?: boolean;
+  isBestSeller?: boolean;
+  stockQuantity: number;
+  lowStockThreshold?: number;
+  images?: string[];
+  isActive?: boolean;
+  categoryId: string;
+  measurementUnitId: string;
 };
 
-export type FragranceFamilyRow = {
+export type BannerRow = {
   id: string;
-  slug: string;
-  name: string;
-};
-
-export type PresignUploadResponse = {
-  uploadUrl: string;
-  key: string;
-  publicUrl: string;
+  imageUrl: string;
+  title: string | null;
+  linkUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ProductFeedbackStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -259,10 +133,9 @@ export type AdminProductFeedbackRow = {
   productId: string;
   userId: string;
   stars: number;
-  comment: string;
+  comment: string | null;
   status: ProductFeedbackStatus;
   createdAt: string;
-  updatedAt: string;
   product: { id: string; title: string };
   user: {
     id: string;
@@ -271,52 +144,64 @@ export type AdminProductFeedbackRow = {
   };
 };
 
-export type OrderItem = {
-  id: string;
-  orderId: string;
-  productId: string | null;
-  quantity: number;
-  unitPriceUzs: number;
-  titleSnapshot: string;
-  sizeId: string | null;
-  sizeLabelSnapshot: string | null;
-  gramsSnapshot: number | null;
-};
-
 export type OrderStatus =
   | 'PENDING'
   | 'CONFIRMED'
+  | 'PREPARING'
   | 'SHIPPED'
   | 'DELIVERED'
   | 'CANCELLED';
+
+export type AdminOrderItem = {
+  id: string;
+  productId: string | null;
+  quantity: number;
+  unitPriceKrw: number;
+  titleSnapshot: string;
+  imageSnapshot: string | null;
+  unitNameSnapshot: string | null;
+  unitSymbolSnapshot: string | null;
+};
 
 export type AdminOrder = {
   id: string;
   userId: string;
   status: OrderStatus;
-  subtotalUzs: number;
-  totalUzs: number;
-  coinsAppliedUzs: number;
-  cashPaidUzs: number;
-  deliveryPhone: string | null;
-  deliveryFirstName: string | null;
-  deliveryLastName: string | null;
-  deliveryLatitude: number | null;
-  deliveryLongitude: number | null;
+  subtotalKrw: number;
+  discountKrw: number;
+  totalKrw: number;
+  addressNameSnapshot: string | null;
+  roadAddressSnapshot: string | null;
+  jibunAddressSnapshot: string | null;
+  buildingNameSnapshot: string | null;
+  zoneNoSnapshot: string | null;
+  detailAddressSnapshot: string | null;
+  latitudeSnapshot: number | null;
+  longitudeSnapshot: number | null;
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
-  items: OrderItem[];
-  user: {
-    id: string;
-    telegramId: string;
-    firstName: string | null;
-    lastName: string | null;
-    phone: string | null;
-    birthDate: string | null;
-  };
+  user?: TelegramUser | null;
+  items: AdminOrderItem[];
 };
 
-export type UserTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+export type UserAddress = {
+  id: string;
+  label: string;
+  recipientName: string | null;
+  phone: string | null;
+  addressName: string;
+  roadAddressName: string | null;
+  jibunAddressName: string | null;
+  buildingName: string | null;
+  zoneNo: string | null;
+  detailAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type TelegramUser = {
   id: string;
@@ -325,284 +210,139 @@ export type TelegramUser = {
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
-  birthDate: string | null;
-  gender: string;
-  referralCode: string;
-  referredByUserId: string | null;
-  campaignId: string | null;
-  tier: UserTier;
-  coinBalance: number;
-  locale: string;
-  profileBonusBirthdateDone: boolean;
-  profileBonusGenderDone: boolean;
-  profileBonusLastNameDone: boolean;
-  profileBonusFullDone: boolean;
+  languageCode: string | null;
   createdAt: string;
   updatedAt: string;
-};
-
-export type ReferralTreeNode = {
-  id: string;
-  firstName: string | null;
-  lastName: string | null;
-  referralCode: string;
-  createdAt: string;
-  children: ReferralTreeNode[];
-};
-
-export type RewardSettings = {
-  id: string;
-  referralCoins: number;
-  profileBirthdayCoins: number;
-  profileGenderCoins: number;
-  profileLastNameCoins: number;
-  profileFullCoins: number;
-  updatedAt: string;
-};
-
-export type AdminCoinGiftRow = {
-  id: string;
-  title: string;
-  description: string;
-  imageUrl: string;
-  coins: number;
-  targetUserId: string;
-  createdByAdminId: string;
-  createdAt: string;
-  targetUser: {
-    telegramId: string;
-    firstName: string | null;
-    lastName: string | null;
-    locale: string;
+  addresses?: UserAddress[];
+  _count?: {
+    orders?: number;
+    wishlistItems?: number;
+    cartItems?: number;
+    addresses?: number;
   };
 };
 
-export type CoinLedgerRow = {
-  id: string;
-  userId: string;
-  delta: number;
-  kind: string;
-  metadata: unknown;
-  createdAt: string;
+export type UserDetail360 = {
+  user: TelegramUser;
+  addresses: UserAddress[];
+  orders: AdminOrder[];
+  wishlistItems: Array<{
+    id: string;
+    createdAt: string;
+    product: Pick<Product, 'id' | 'title' | 'priceKrw' | 'images'>;
+  }>;
+  cartItems: Array<{
+    id: string;
+    qty: number;
+    product: Pick<Product, 'id' | 'title' | 'priceKrw' | 'images'>;
+  }>;
+  kpis: {
+    orderCount: number;
+    totalSpentKrw: number;
+    wishlistCount: number;
+    cartItemCount: number;
+    addressCount: number;
+  };
 };
 
-export type FinanceKpis = {
-  grossRevenueUzs: number;
-  cashCollectedUzs: number;
-  coinsAppliedUzs: number;
-  promoDiscountUzs: number;
-  ordersCount: number;
-  cancelledCount: number;
-  cancelledCashUzs: number;
-  aovUzs: number;
-  deliveredRevenueUzs: number;
-  pendingPipelineUzs: number;
+export type DashboardStats = {
+  totals: {
+    productCount: number;
+    ordersInRange: number;
+    newUsersInRange: number;
+    revenueKrw: number;
+    cancelledOrdersInRange: number;
+  };
+  series: Array<{
+    date: string;
+    orders: number;
+    newUsers: number;
+    revenueKrw: number;
+    cancelledOrderCount: number;
+  }>;
+};
+
+export type DashboardOverview = {
+  users: { total: number; newLast7d: number };
+  orders: Record<'total' | 'pendingCount' | 'confirmedCount' | 'preparingCount' | 'shippedCount' | 'deliveredCount' | 'cancelledCount' | 'todayOrders', number>;
+  catalog: {
+    productCount: number;
+    saleCount: number;
+    bestsellerCount: number;
+    averagePriceKrw: number;
+  };
+  inventory: { totalStockQuantity: number; lowStockCount: number };
+  finance: { revenueKrw: number; deliveredRevenueKrw: number };
+  engagement: {
+    wishlistCount: number;
+    cartItemCount: number;
+    productFeedbackPending: number;
+  };
 };
 
 export type FinanceReport = {
   range: { fromIso: string; toIso: string; days: number };
-  previousRange?: { fromIso: string; toIso: string };
-  kpis: FinanceKpis;
-  kpisPrev?: FinanceKpis;
-  series: Array<{
-    date: string;
-    grossUzs: number;
-    cashUzs: number;
-    coinsUzs: number;
-    discountUzs: number;
-    cancelledCashUzs: number;
-    ordersCount: number;
-    cancelledCount: number;
-  }>;
-  byStatus: Array<{
-    status: OrderStatus;
-    count: number;
-    grossUzs: number;
-    cashUzs: number;
-    coinsUzs: number;
-  }>;
-  byTier: Array<{
-    tier: UserTier;
-    count: number;
-    grossUzs: number;
-    cashUzs: number;
-    coinsUzs: number;
-  }>;
-  topCustomers: Array<{
-    userId: string;
-    telegramId: string;
-    displayName: string;
-    ordersCount: number;
-    grossUzs: number;
-    cashUzs: number;
-    coinsUzs: number;
-  }>;
-  promoCodes: Array<{
-    promoCodeId: string;
-    code: string;
-    redemptions: number;
-    discountUzs: number;
-    ordersCount: number;
-  }>;
-  coinEconomy: {
-    issuedInRange: {
-      total: number;
-      byKind: {
-        REFERRAL_EARNED: number;
-        PROFILE_BONUS: number;
-        ADMIN_GIFT: number;
-        ADMIN_ADJUSTMENT_POSITIVE: number;
-      };
-    };
-    redeemedInRange: number;
-    refundedInRange: number;
-    adminAdjustmentsNegativeInRange: number;
-    netChangeInRange: number;
-    outstandingLiabilityNow: number;
+  kpis: {
+    grossRevenueKrw: number;
+    deliveredRevenueKrw: number;
+    pendingOrderAmountKrw: number;
+    cancelledOrderAmountKrw: number;
+    totalOrders: number;
+    averageOrderValueKrw: number;
   };
+  series: Array<{ date: string; revenueKrw: number; ordersCount: number; cancelledCount: number }>;
+  byStatus: Array<{ status: OrderStatus; count: number; amountKrw: number }>;
+  topProducts: Array<{ productId: string; title: string; quantity: number; revenueKrw: number }>;
+  topCategories: Array<{ categoryId: string; name: string; quantity: number; revenueKrw: number }>;
 };
 
-export type CampaignRow = {
+export type InventorySummary = {
+  productCount: number;
+  totalStockQuantity: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+};
+
+export type InventoryMovementRow = {
   id: string;
-  slug: string;
-  name: string;
+  orderId: string | null;
+  productId: string;
+  delta: number;
+  reason: string | null;
   createdAt: string;
-  attributedUsers: number;
-  miniAppUrl: string | null;
-  attributedOrders: number;
-  attributedRevenueUzs: number;
-};
-
-export type CategoryRow = {
-  id: string;
-  slug: string;
-  name: string;
-  parentId: string | null;
-  sortOrder: number;
-};
-
-export type BrandRow = {
-  id: string;
-  slug: string;
-  name: string;
-  logoUrl: string | null;
-};
-
-export type PromoCodeRow = {
-  id: string;
-  code: string;
-  kind: 'PERCENT' | 'FIXED' | 'FREE_SHIPPING' | 'FIRST_ORDER';
-  value: number;
-  isActive: boolean;
-  startsAt: string | null;
-  endsAt: string | null;
-  minOrderUzs: number | null;
-};
-
-export type UserSegmentRow = {
-  id: string;
-  name: string;
-  definition: unknown;
-  userCountCached: number;
-  recomputedAt: string | null;
+  product: { title: string };
 };
 
 export type BroadcastRow = {
   id: string;
   title: string;
-  status: 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'FAILED';
+  body: string;
+  imageUrl: string | null;
+  targetUrl: string | null;
+  status: 'DRAFT' | 'SENT' | 'FAILED' | 'SENDING';
   sentCount: number;
   errorCount: number;
-  scheduledFor: string | null;
-  segmentId: string;
-  bodyUz: string;
-  bodyRu: string;
-  imageUrl: string | null;
-  segment: { name: string; userCountCached: number };
   createdAt: string;
   updatedAt: string;
 };
 
-export type DashboardOverview = {
-  users: {
-    total: number;
-    tierDistribution: Record<UserTier, number>;
-    activeLast7d: number;
-    coinBalanceTotal: number;
-    avgCoinBalance: number;
-    profileCompletionRate: number;
-  };
-  orders: {
-    total: number;
-    pendingCount: number;
-    confirmedCount: number;
-    shippedCount: number;
-    deliveredCount: number;
-    cancelledCount: number;
-  };
-  catalog: {
-    productCount: number;
-    bestsellerCount: number;
-    newArrivalCount: number;
-    discountedCount: number;
-    averagePriceUzs: number;
-  };
-  inventory: {
-    totalStockGrams: number;
-    totalStockPieces: number;
-    productsTrackedGrams: number;
-    productsTrackedPieces: number;
-    lowStockCount: number;
-  };
-  engagement: {
-    wishlistCount: number;
-    cartItemCount: number;
-    referralRewardsCount: number;
-    productFeedbackPending: number;
-  };
-};
-
-export type InventorySummary = {
-  productCount: number;
-  totalStockGrams: number;
-  totalStockPieces: number;
-  productsTrackedGrams: number;
-  productsTrackedPieces: number;
-  outOfStockGrams: number;
-  outOfStockPieces: number;
-};
-
-export type StockMovementRow = {
+export type AdminPanelUserRow = {
   id: string;
-  productId: string;
-  delta: number;
-  deltaGrams: number;
-  reason: string;
+  email: string;
+  fullName: string | null;
+  isActive: boolean;
+  isSuperAdmin: boolean;
   createdAt: string;
-  product: { title: string };
+  updatedAt: string;
 };
 
-export type CampaignSlugCheck = {
-  formatOk: boolean;
-  available: boolean;
-  previewUrl: string | null;
+export type AdminPanelUserDetail = AdminPanelUserRow & {
+  passwordHash?: string;
 };
-
-export type { PaginatedResult };
-
-export type AdminOrdersQuery = {
-  page: number;
-  pageSize: number;
-  status?: OrderStatus;
-  createdFrom?: string;
-  createdTo?: string;
-};
-
-export type AdminNotificationKind = 'ORDER_CREATED' | 'ORDER_UPDATED';
 
 export type AdminNotificationItem = {
   id: string;
-  kind: AdminNotificationKind;
+  kind: string;
   orderId: string;
   read: boolean;
   createdAt: string;
@@ -610,968 +350,299 @@ export type AdminNotificationItem = {
 
 export const parfumApi = createApi({
   reducerPath: 'parfumApi',
-  baseQuery: baseQueryWithAuth,
+  baseQuery: fetchBaseQuery({
+    baseUrl: API_BASE_URL,
+    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as RootState).auth.accessToken;
+      if (token) {
+        headers.set('authorization', `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
   tagTypes: [
-    'Product',
-    'Order',
-    'User',
-    'Stats',
-    'Notification',
-    'SizePreset',
-    'RewardSettings',
-    'CoinGift',
-    'CoinLedger',
-    'Finance',
-    'Campaign',
-    'ProductFeedback',
-    'Segment',
-    'Broadcast',
-    'Brand',
+    'AdminPanelUser',
     'Banner',
+    'Broadcast',
     'Category',
-    'Family',
-    'PromoCode',
+    'Finance',
     'Inventory',
     'InventoryMovement',
+    'MeasurementUnit',
+    'Notification',
+    'Order',
+    'Product',
+    'ProductFeedback',
+    'Stats',
+    'User',
     'UserDetail',
-    'AdminPanelUser',
-    'Role',
-    'Permission',
   ],
   endpoints: (build) => ({
     login: build.mutation<LoginResponse, { email: string; password: string }>({
-      query: (body) => ({
-        url: '/admin/auth/login',
-        method: 'POST',
-        body,
-      }),
+      query: (body) => ({ url: '/admin/auth/login', method: 'POST', body }),
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        const { data } = await queryFulfilled;
+        dispatch(setCredentials({ accessToken: data.accessToken }));
+        dispatch(setProfile(data.admin));
+      },
     }),
     getMe: build.query<AdminProfile, void>({
       query: () => '/admin/auth/me',
-      keepUnusedDataFor: 0,
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(setProfile(data));
-        } catch {
-          /* handled by baseQueryWithAuth */
-        }
+        const { data } = await queryFulfilled;
+        dispatch(setProfile(data));
       },
     }),
-    listAdminPanelUsers: build.query<
-      PaginatedResult<AdminPanelUserRow>,
-      { page?: number; pageSize?: number; q?: string }
-    >({
-      query: (params) => ({
-        url: '/admin/settings/admin-users',
-        params,
-      }),
-      transformResponse: normalizePaginated,
-      providesTags: ['AdminPanelUser'],
-    }),
-    getAdminPanelUser: build.query<AdminPanelUserDetail, string>({
-      query: (id) => `/admin/settings/admin-users/${id}`,
-      providesTags: (_r, _e, id) => [{ type: 'AdminPanelUser', id }],
-    }),
-    createAdminPanelUser: build.mutation<
-      AdminPanelUserDetail,
-      {
-        email: string;
-        password: string;
-        fullName?: string;
-        roleId?: string;
-        isActive?: boolean;
-      }
-    >({
-      query: (body) => ({
-        url: '/admin/settings/admin-users',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['AdminPanelUser'],
-    }),
-    updateAdminPanelUser: build.mutation<
-      AdminPanelUserDetail,
-      {
-        id: string;
-        email?: string;
-        password?: string;
-        fullName?: string | null;
-        roleId?: string | null;
-        isActive?: boolean;
-      }
-    >({
-      query: ({ id, ...body }) => ({
-        url: `/admin/settings/admin-users/${id}`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'AdminPanelUser', id }, 'AdminPanelUser'],
-    }),
-    deleteAdminPanelUser: build.mutation<{ ok: boolean }, string>({
-      query: (id) => ({
-        url: `/admin/settings/admin-users/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['AdminPanelUser'],
-    }),
-    setAdminPanelUserPermissions: build.mutation<
-      AdminPanelUserDetail,
-      { id: string; permissionIds: string[] }
-    >({
-      query: ({ id, permissionIds }) => ({
-        url: `/admin/settings/admin-users/${id}/permissions`,
-        method: 'PUT',
-        body: { permissionIds },
-      }),
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'AdminPanelUser', id }, 'AdminPanelUser'],
-    }),
-    listRoles: build.query<RoleRow[], void>({
-      query: () => '/admin/settings/roles',
-      providesTags: ['Role'],
-    }),
-    getRole: build.query<RoleDetail, string>({
-      query: (id) => `/admin/settings/roles/${id}`,
-      providesTags: (_r, _e, id) => [{ type: 'Role', id }],
-    }),
-    createRole: build.mutation<
-      RoleDetail,
-      { key: string; name: string; description?: string }
-    >({
-      query: (body) => ({
-        url: '/admin/settings/roles',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['Role'],
-    }),
-    updateRole: build.mutation<
-      RoleDetail,
-      { id: string; key?: string; name?: string; description?: string | null }
-    >({
-      query: ({ id, ...body }) => ({
-        url: `/admin/settings/roles/${id}`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Role', id }, 'Role'],
-    }),
-    deleteRole: build.mutation<{ ok: boolean }, string>({
-      query: (id) => ({
-        url: `/admin/settings/roles/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['Role'],
-    }),
-    setRolePermissions: build.mutation<
-      RoleDetail,
-      { id: string; permissionIds: string[] }
-    >({
-      query: ({ id, permissionIds }) => ({
-        url: `/admin/settings/roles/${id}/permissions`,
-        method: 'PUT',
-        body: { permissionIds },
-      }),
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Role', id }, 'Role'],
-    }),
-    listPermissions: build.query<PermissionRow[], void>({
-      query: () => '/admin/settings/permissions',
-      providesTags: ['Permission'],
-    }),
-    createPermission: build.mutation<
-      PermissionRow,
-      { key: string; name: string; description?: string }
-    >({
-      query: (body) => ({
-        url: '/admin/settings/permissions',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['Permission'],
-    }),
-    updatePermission: build.mutation<
-      PermissionRow,
-      { id: string; key?: string; name?: string; description?: string | null }
-    >({
-      query: ({ id, ...body }) => ({
-        url: `/admin/settings/permissions/${id}`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: ['Permission'],
-    }),
-    deletePermission: build.mutation<{ ok: boolean }, string>({
-      query: (id) => ({
-        url: `/admin/settings/permissions/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['Permission'],
-    }),
-    getDashboardStats: build.query<
-      DashboardStats,
-      { from: string; to: string }
-    >({
-      query: ({ from, to }) => ({
-        url: '/admin/stats',
-        params: { from, to },
-      }),
+
+    getDashboardStats: build.query<DashboardStats, { from?: string; to?: string } | void>({
+      query: (filters) => ({ url: '/admin/stats/dashboard', params: filters ?? undefined }),
       providesTags: ['Stats'],
-    }),
-    getInsightsFunnel: build.query<InsightsFunnel, { from: string; to: string }>({
-      query: ({ from, to }) => ({
-        url: '/admin/stats/insights/funnel',
-        params: { from, to },
-      }),
-      providesTags: ['Stats'],
-    }),
-    getInsightsAovLtv: build.query<InsightsAovLtv, { from: string; to: string }>({
-      query: ({ from, to }) => ({
-        url: '/admin/stats/insights/aov-ltv',
-        params: { from, to },
-      }),
-      providesTags: ['Stats'],
-    }),
-    getInsightsTopProducts: build.query<
-      InsightsTopProduct[],
-      { from: string; to: string; metric: 'views' | 'sales' | 'revenue' }
-    >({
-      query: ({ from, to, metric }) => ({
-        url: '/admin/stats/insights/top-products',
-        params: { from, to, metric },
-      }),
-      providesTags: ['Stats'],
-    }),
-    getInsightsSearchTerms: build.query<InsightsSearchTerm[], { from: string; to: string }>({
-      query: ({ from, to }) => ({
-        url: '/admin/stats/insights/search-terms',
-        params: { from, to },
-      }),
-      providesTags: ['Stats'],
-    }),
-    getSizePresets: build.query<PaginatedResult<SizePreset>, { page: number; pageSize: number }>({
-      query: ({ page, pageSize }) => ({
-        url: '/admin/size-presets',
-        params: { page, pageSize },
-      }),
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<SizePreset>(response, { page: arg.page, pageSize: arg.pageSize }),
-      providesTags: (result) =>
-        result?.items?.length
-          ? [
-              ...result.items.map((p) => ({ type: 'SizePreset' as const, id: p.id })),
-              { type: 'SizePreset', id: 'LIST' },
-            ]
-          : [{ type: 'SizePreset', id: 'LIST' }],
-    }),
-    createSizePreset: build.mutation<
-      SizePreset,
-      { slug: string; label: string; grams: number; sortOrder?: number }
-    >({
-      query: (body) => ({
-        url: '/admin/size-presets',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: [{ type: 'SizePreset', id: 'LIST' }],
-    }),
-    updateSizePreset: build.mutation<
-      SizePreset,
-      { id: string; body: Partial<{ slug: string; label: string; grams: number; sortOrder: number }> }
-    >({
-      query: ({ id, body }) => ({
-        url: `/admin/size-presets/${id}`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: (_r, _e, { id }) => [
-        { type: 'SizePreset', id },
-        { type: 'SizePreset', id: 'LIST' },
-      ],
-    }),
-    deleteSizePreset: build.mutation<{ ok: true }, string>({
-      query: (id) => ({
-        url: `/admin/size-presets/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: [{ type: 'SizePreset', id: 'LIST' }],
-    }),
-    getProducts: build.query<
-      PaginatedResult<Product>,
-      { page: number; pageSize: number } & ProductListFilters
-    >({
-      query: ({ page, pageSize, ...filters }) => {
-        const params: Record<string, string | number> = { page, pageSize };
-        if (filters.q) params.q = filters.q;
-        if (filters.sort) params.sort = filters.sort;
-        if (filters.gender) params.gender = filters.gender;
-        if (filters.priceMin !== undefined) params.priceMin = filters.priceMin;
-        if (filters.priceMax !== undefined) params.priceMax = filters.priceMax;
-        if (filters.bestseller) params.bestseller = 'true';
-        if (filters.newArrival) params.newArrival = 'true';
-        if (filters.discounted) params.discounted = 'true';
-        if (filters.inStockOnly) params.inStockOnly = 'true';
-        if (filters.brandIds?.length) params.brandIds = filters.brandIds.join(',');
-        if (filters.categoryIds?.length) params.categoryIds = filters.categoryIds.join(',');
-        if (filters.familyIds?.length) params.familyIds = filters.familyIds.join(',');
-        return { url: '/products', params };
-      },
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<Product>(response, { page: arg.page, pageSize: arg.pageSize }),
-      providesTags: (result) =>
-        result?.items?.length
-          ? [
-              ...result.items.map((p) => ({ type: 'Product' as const, id: p.id })),
-              { type: 'Product', id: 'LIST' },
-            ]
-          : [{ type: 'Product', id: 'LIST' }],
-    }),
-    createProduct: build.mutation<Product, ProductWritePayload>({
-      query: (body) => ({ url: '/admin/products', method: 'POST', body }),
-      invalidatesTags: [
-        { type: 'Product', id: 'LIST' },
-        { type: 'Inventory', id: 'LIST' },
-        'Stats',
-      ],
-    }),
-    updateProduct: build.mutation<
-      Product,
-      { id: string; body: Partial<ProductWritePayload> }
-    >({
-      query: ({ id, body }) => ({
-        url: `/admin/products/${id}`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: (_r, _e, { id }) => [
-        { type: 'Product', id },
-        { type: 'Product', id: 'LIST' },
-        { type: 'Inventory', id: 'LIST' },
-        'Stats',
-      ],
-    }),
-    presignUpload: build.mutation<
-      PresignUploadResponse,
-      { contentType: string; keyPrefix?: string }
-    >({
-      query: (body) => ({
-        url: '/admin/storage/presign',
-        method: 'POST',
-        body,
-      }),
-    }),
-    getFragranceFamilies: build.query<FragranceFamilyRow[], void>({
-      query: () => '/fragrance-families',
-      providesTags: [{ type: 'Family', id: 'LIST' }],
-    }),
-    deleteProduct: build.mutation<{ ok: true }, string>({
-      query: (id) => ({ url: `/admin/products/${id}`, method: 'DELETE' }),
-      invalidatesTags: (_r, _e, id) => [
-        { type: 'Product', id },
-        { type: 'Product', id: 'LIST' },
-        { type: 'Inventory', id: 'LIST' },
-        'Stats',
-      ],
-    }),
-    listProductFeedback: build.query<
-      PaginatedResult<AdminProductFeedbackRow>,
-      { page: number; pageSize: number; status?: ProductFeedbackStatus }
-    >({
-      query: ({ page, pageSize, status }) => ({
-        url: '/admin/product-feedback',
-        params: {
-          page,
-          pageSize,
-          ...(status ? { status } : {}),
-        },
-      }),
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<AdminProductFeedbackRow>(response, {
-          page: arg.page,
-          pageSize: arg.pageSize,
-        }),
-      providesTags: (result) =>
-        result?.items?.length
-          ? [
-              ...result.items.map((r) => ({ type: 'ProductFeedback' as const, id: r.id })),
-              { type: 'ProductFeedback', id: 'LIST' },
-            ]
-          : [{ type: 'ProductFeedback', id: 'LIST' }],
-    }),
-    patchProductFeedbackStatus: build.mutation<
-      AdminProductFeedbackRow,
-      { id: string; status: 'APPROVED' | 'REJECTED' }
-    >({
-      query: ({ id, status }) => ({
-        url: `/admin/product-feedback/${id}`,
-        method: 'PATCH',
-        body: { status },
-      }),
-      invalidatesTags: (result) => [
-        { type: 'ProductFeedback', id: 'LIST' },
-        ...(result
-          ? [
-              { type: 'ProductFeedback' as const, id: result.id },
-              { type: 'Product' as const, id: result.productId },
-            ]
-          : []),
-        { type: 'Product', id: 'LIST' },
-      ],
-    }),
-    getOrders: build.query<PaginatedResult<AdminOrder>, AdminOrdersQuery>({
-      query: ({ page, pageSize, status, createdFrom, createdTo }) => {
-        const params: Record<string, string | number> = { page, pageSize };
-        if (status) params.status = status;
-        if (createdFrom) params.createdFrom = createdFrom;
-        if (createdTo) params.createdTo = createdTo;
-        return { url: '/admin/orders', params };
-      },
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<AdminOrder>(response, { page: arg.page, pageSize: arg.pageSize }),
-      providesTags: (result) =>
-        result?.items?.length
-          ? [
-              ...result.items.map((o) => ({ type: 'Order' as const, id: o.id })),
-              { type: 'Order', id: 'LIST' },
-            ]
-          : [{ type: 'Order', id: 'LIST' }],
-    }),
-    getAdminOrder: build.query<AdminOrder, string>({
-      query: (id) => `/admin/orders/${id}`,
-      providesTags: (_r, _e, id) => [{ type: 'Order', id }],
-    }),
-    updateOrderStatus: build.mutation<
-      { id: string; status: OrderStatus; updatedAt: string },
-      { id: string; status: OrderStatus }
-    >({
-      query: ({ id, status }) => ({
-        url: `/admin/orders/${id}/status`,
-        method: 'PATCH',
-        body: { status },
-      }),
-      invalidatesTags: (_r, _e, { id }) => [
-        { type: 'Order', id },
-        { type: 'Order', id: 'LIST' },
-      ],
-    }),
-    getUsers: build.query<
-      PaginatedResult<TelegramUser>,
-      { page: number; pageSize: number; q?: string; tier?: UserTier }
-    >({
-      query: ({ page, pageSize, q, tier }) => {
-        const params: Record<string, string | number> = { page, pageSize };
-        if (q) params.q = q;
-        if (tier) params.tier = tier;
-        return { url: '/admin/users', params };
-      },
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<TelegramUser>(response, { page: arg.page, pageSize: arg.pageSize }),
-      providesTags: (result) =>
-        result?.items?.length
-          ? [
-              ...result.items.map((u) => ({ type: 'User' as const, id: u.id })),
-              { type: 'User', id: 'LIST' },
-            ]
-          : [{ type: 'User', id: 'LIST' }],
-    }),
-    getUserReferralTree: build.query<
-      ReferralTreeNode,
-      { userId: string; maxDepth?: number }
-    >({
-      query: ({ userId, maxDepth = 5 }) => ({
-        url: `/admin/users/${encodeURIComponent(userId)}/referral-tree`,
-        params: { maxDepth },
-      }),
-    }),
-    getNotifications: build.query<AdminNotificationItem[], void>({
-      query: () => ({
-        url: '/admin/notifications',
-        params: { limit: 50 },
-      }),
-      providesTags: [{ type: 'Notification', id: 'LIST' }],
-    }),
-    markNotificationRead: build.mutation<{ ok: true }, string>({
-      query: (id) => ({
-        url: `/admin/notifications/${id}/read`,
-        method: 'PATCH',
-      }),
-      invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
-    }),
-    markAllNotificationsRead: build.mutation<{ marked: number }, void>({
-      query: () => ({
-        url: '/admin/notifications/read-all',
-        method: 'POST',
-      }),
-      invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
-    }),
-    getAdminRewardSettings: build.query<RewardSettings, void>({
-      query: () => '/admin/settings/rewards',
-      providesTags: [{ type: 'RewardSettings', id: 'SINGLE' }],
-    }),
-    patchAdminRewardSettings: build.mutation<
-      RewardSettings,
-      Partial<{
-        referralCoins: number;
-        profileBirthdayCoins: number;
-        profileGenderCoins: number;
-        profileLastNameCoins: number;
-        profileFullCoins: number;
-      }>
-    >({
-      query: (body) => ({ url: '/admin/settings/rewards', method: 'PATCH', body }),
-      invalidatesTags: [{ type: 'RewardSettings', id: 'SINGLE' }],
-    }),
-    giftUserCoins: build.mutation<
-      { id: string },
-      {
-        userId: string;
-        title: string;
-        description?: string;
-        imageUrl?: string;
-        coins: number;
-      }
-    >({
-      query: ({ userId, ...body }) => ({
-        url: `/admin/users/${userId}/coins/gift`,
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: (_r, _e, { userId }) => [
-        { type: 'User', id: userId },
-        { type: 'User', id: 'LIST' },
-        { type: 'UserDetail', id: userId },
-        { type: 'CoinGift', id: 'LIST' },
-        { type: 'CoinLedger', id: 'LIST' },
-      ],
-    }),
-    adjustUserCoins: build.mutation<
-      { newBalance: number },
-      { userId: string; password: string; deltaUzs: number; note?: string }
-    >({
-      query: ({ userId, ...body }) => ({
-        url: `/admin/users/${userId}/coins/adjust`,
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: (_r, _e, { userId }) => [
-        { type: 'User', id: userId },
-        { type: 'User', id: 'LIST' },
-        { type: 'UserDetail', id: userId },
-        { type: 'CoinLedger', id: 'LIST' },
-      ],
-    }),
-    getCoinGifts: build.query<PaginatedResult<AdminCoinGiftRow>, { page: number; pageSize: number }>({
-      query: ({ page, pageSize }) => ({
-        url: '/admin/coin-gifts',
-        params: { page, pageSize },
-      }),
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<AdminCoinGiftRow>(response, {
-          page: arg.page,
-          pageSize: arg.pageSize,
-        }),
-      providesTags: [{ type: 'CoinGift', id: 'LIST' }],
-    }),
-    getCoinLedger: build.query<
-      PaginatedResult<CoinLedgerRow>,
-      { page: number; pageSize: number; userId?: string }
-    >({
-      query: ({ page, pageSize, userId }) => ({
-        url: '/admin/coin-ledger',
-        params: { page, pageSize, ...(userId ? { userId } : {}) },
-      }),
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<CoinLedgerRow>(response, {
-          page: arg.page,
-          pageSize: arg.pageSize,
-        }),
-      providesTags: [{ type: 'CoinLedger', id: 'LIST' }],
-    }),
-    getFinanceReport: build.query<
-      FinanceReport,
-      { from: string; to: string; compare?: boolean }
-    >({
-      query: ({ from, to, compare }) => ({
-        url: '/admin/finance/report',
-        params: { from, to, ...(compare ? { compare: true } : {}) },
-      }),
-      providesTags: [{ type: 'Finance', id: 'REPORT' }],
-    }),
-    getCampaigns: build.query<CampaignRow[], void>({
-      query: () => '/admin/campaigns',
-      providesTags: [{ type: 'Campaign', id: 'LIST' }],
-    }),
-    createCampaign: build.mutation<CampaignRow, { slug: string; name: string }>({
-      query: (body) => ({ url: '/admin/campaigns', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Campaign', id: 'LIST' }],
-    }),
-    getCampaignLinkHelp: build.query<
-      { template: string | null; envHints: string[] },
-      void
-    >({
-      query: () => '/admin/campaigns/helpers/link-help',
-    }),
-    getCampaignSlugCheck: build.query<CampaignSlugCheck, string>({
-      query: (slug) => ({
-        url: '/admin/campaigns/helpers/check-slug',
-        params: { slug },
-      }),
-    }),
-    getCampaignStats: build.query<
-      {
-        campaign: { id: string; slug: string; name: string };
-        totalAttributedUsers: number;
-        signupsInRange: number;
-        attributedOrders: number;
-        attributedRevenueUzs: number;
-        firstOrderConversionRate: number;
-        series: Array<{ date: string; signups: number }>;
-        sampleUrl: string | null;
-      },
-      { slug: string; from: string; to: string }
-    >({
-      query: ({ slug, from, to }) => ({
-        url: `/admin/campaigns/${encodeURIComponent(slug)}/stats`,
-        params: { from, to },
-      }),
-    }),
-    getCategories: build.query<CategoryRow[], void>({
-      query: () => '/categories',
-      providesTags: [{ type: 'Category', id: 'LIST' }],
-    }),
-    createCategory: build.mutation<CategoryRow, { slug: string; name: string; parentId?: string; sortOrder?: number }>({
-      query: (body) => ({ url: '/categories/admin', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Category', id: 'LIST' }],
-    }),
-    getBrands: build.query<BrandRow[], void>({
-      query: () => '/brands',
-      providesTags: [{ type: 'Brand', id: 'LIST' }],
-    }),
-    createBrand: build.mutation<BrandRow, { slug: string; name: string; logoUrl?: string }>({
-      query: (body) => ({ url: '/brands/admin', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Brand', id: 'LIST' }],
-    }),
-    getAdminBanners: build.query<
-      Array<{
-        id: string;
-        imageUrl: string;
-        title: string | null;
-        linkUrl: string | null;
-        sortOrder: number;
-        isActive: boolean;
-      }>,
-      void
-    >({
-      query: () => '/admin/banners',
-      providesTags: [{ type: 'Banner', id: 'LIST' }],
-    }),
-    createBanner: build.mutation<
-      { id: string },
-      {
-        imageUrl: string;
-        title?: string;
-        linkUrl?: string;
-        sortOrder?: number;
-        isActive?: boolean;
-        startsAt?: string;
-        endsAt?: string;
-      }
-    >({
-      query: (body) => ({ url: '/admin/banners', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Banner', id: 'LIST' }],
-    }),
-    updateBanner: build.mutation<
-      { id: string },
-      {
-        id: string;
-        imageUrl?: string;
-        title?: string | null;
-        linkUrl?: string | null;
-        sortOrder?: number;
-        isActive?: boolean;
-      }
-    >({
-      query: ({ id, ...body }) => ({
-        url: `/admin/banners/${id}`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: [{ type: 'Banner', id: 'LIST' }],
-    }),
-    deleteBanner: build.mutation<{ ok: true }, string>({
-      query: (id) => ({
-        url: `/admin/banners/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: [{ type: 'Banner', id: 'LIST' }],
-    }),
-    getPromoCodes: build.query<PromoCodeRow[], void>({
-      query: () => '/promo-codes/admin',
-      providesTags: [{ type: 'PromoCode', id: 'LIST' }],
-    }),
-    createPromoCode: build.mutation<
-      PromoCodeRow,
-      {
-        code: string;
-        kind: 'PERCENT' | 'FIXED' | 'FREE_SHIPPING' | 'FIRST_ORDER';
-        value: number;
-        minOrderUzs?: number;
-        startsAt?: string;
-        endsAt?: string;
-        usageLimit?: number;
-        perUserLimit?: number;
-      }
-    >({
-      query: (body) => ({ url: '/promo-codes/admin', method: 'POST', body }),
-      invalidatesTags: [{ type: 'PromoCode', id: 'LIST' }],
-    }),
-    getSegments: build.query<UserSegmentRow[], void>({
-      query: () => '/admin/segments',
-      providesTags: [{ type: 'Segment', id: 'LIST' }],
-    }),
-    createSegment: build.mutation<UserSegmentRow, { name: string; definition: Record<string, unknown> }>({
-      query: (body) => ({ url: '/admin/segments', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Segment', id: 'LIST' }],
-    }),
-    syncSegmentMembers: build.mutation<{ synced: number }, string>({
-      query: (segmentId) => ({ url: `/admin/segments/${segmentId}/sync-members`, method: 'POST' }),
-      invalidatesTags: [{ type: 'Segment', id: 'LIST' }],
-    }),
-    addSegmentMembers: build.mutation<{ added: number }, { segmentId: string; userIds: string[] }>({
-      query: ({ segmentId, userIds }) => ({
-        url: `/admin/segments/${segmentId}/members`,
-        method: 'POST',
-        body: { userIds },
-      }),
-      invalidatesTags: [{ type: 'Segment', id: 'LIST' }],
-    }),
-    getBroadcasts: build.query<PaginatedResult<BroadcastRow>, { page: number; pageSize: number }>({
-      query: ({ page, pageSize }) => ({
-        url: '/admin/broadcasts',
-        params: { page, pageSize },
-      }),
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<BroadcastRow>(response, { page: arg.page, pageSize: arg.pageSize }),
-      providesTags: (result) =>
-        result?.items?.length
-          ? [
-              ...result.items.map((b) => ({ type: 'Broadcast' as const, id: b.id })),
-              { type: 'Broadcast', id: 'LIST' },
-            ]
-          : [{ type: 'Broadcast', id: 'LIST' }],
-    }),
-    createBroadcast: build.mutation<
-      BroadcastRow,
-      {
-        title: string;
-        bodyUz: string;
-        bodyRu: string;
-        segmentId: string;
-        imageUrl?: string;
-        coinGiftAmount?: number;
-        promoCodeId?: string;
-        scheduledFor?: string;
-      }
-    >({
-      query: (body) => ({ url: '/admin/broadcasts', method: 'POST', body }),
-      invalidatesTags: [{ type: 'Broadcast', id: 'LIST' }],
-    }),
-    sendBroadcastNow: build.mutation<{ sent: number }, string>({
-      query: (id) => ({ url: `/admin/broadcasts/${id}/send`, method: 'POST' }),
-      invalidatesTags: [
-        { type: 'Broadcast', id: 'LIST' },
-        { type: 'Segment', id: 'LIST' },
-      ],
     }),
     getDashboardOverview: build.query<DashboardOverview, void>({
       query: () => '/admin/stats/overview',
       providesTags: ['Stats'],
     }),
+
+    getProducts: build.query<Paginated<Product>, ProductListFilters | void>({
+      query: (filters) => ({ url: '/admin/products', params: filters ?? undefined }),
+      transformResponse: (value: Paginated<Product> | Product[], _meta, arg) =>
+        normalizePaginated(value, arg?.page, arg?.pageSize),
+      providesTags: ['Product'],
+    }),
+    createProduct: build.mutation<Product, ProductWritePayload>({
+      query: (body) => ({ url: '/admin/products', method: 'POST', body }),
+      invalidatesTags: ['Product', 'Stats', 'Inventory'],
+    }),
+    updateProduct: build.mutation<Product, { id: string } & Partial<ProductWritePayload>>({
+      query: ({ id, ...body }) => ({ url: `/admin/products/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Product', 'Stats', 'Inventory'],
+    }),
+    deleteProduct: build.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/admin/products/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Product', 'Stats', 'Inventory'],
+    }),
+    presignUpload: build.mutation<{ uploadUrl: string; publicUrl: string }, { filename: string; contentType: string }>({
+      query: (body) => ({ url: '/admin/storage/presign', method: 'POST', body }),
+    }),
+
+    getCategories: build.query<CategoryRow[], void>({
+      query: () => '/admin/categories',
+      providesTags: ['Category'],
+    }),
+    createCategory: build.mutation<CategoryRow, Partial<CategoryRow> & { slug: string; name: string }>({
+      query: (body) => ({ url: '/admin/categories', method: 'POST', body }),
+      invalidatesTags: ['Category', 'Product'],
+    }),
+    updateCategory: build.mutation<CategoryRow, { id: string } & Partial<CategoryRow>>({
+      query: ({ id, ...body }) => ({ url: `/admin/categories/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Category', 'Product'],
+    }),
+    deleteCategory: build.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/admin/categories/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Category', 'Product'],
+    }),
+
+    getMeasurementUnits: build.query<MeasurementUnit[], void>({
+      query: () => '/admin/measurement-units',
+      providesTags: ['MeasurementUnit'],
+    }),
+    createMeasurementUnit: build.mutation<MeasurementUnit, { slug: string; name: string; symbol: string; sortOrder?: number; allowDecimal?: boolean }>({
+      query: (body) => ({ url: '/admin/measurement-units', method: 'POST', body }),
+      invalidatesTags: ['MeasurementUnit', 'Product'],
+    }),
+    updateMeasurementUnit: build.mutation<MeasurementUnit, { id: string; slug?: string; name?: string; symbol?: string; sortOrder?: number; allowDecimal?: boolean }>({
+      query: ({ id, ...body }) => ({ url: `/admin/measurement-units/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['MeasurementUnit', 'Product'],
+    }),
+    deleteMeasurementUnit: build.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/admin/measurement-units/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['MeasurementUnit', 'Product'],
+    }),
+
+    getAdminBanners: build.query<BannerRow[], void>({
+      query: () => '/admin/banners',
+      providesTags: ['Banner'],
+    }),
+    createBanner: build.mutation<BannerRow, Partial<BannerRow> & { imageUrl: string }>({
+      query: (body) => ({ url: '/admin/banners', method: 'POST', body }),
+      invalidatesTags: ['Banner'],
+    }),
+    updateBanner: build.mutation<BannerRow, { id: string } & Partial<BannerRow>>({
+      query: ({ id, ...body }) => ({ url: `/admin/banners/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Banner'],
+    }),
+    deleteBanner: build.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/admin/banners/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Banner'],
+    }),
+
+    listProductFeedback: build.query<Paginated<AdminProductFeedbackRow>, { page?: number; pageSize?: number; status?: ProductFeedbackStatus } | void>({
+      query: (filters) => ({ url: '/admin/product-feedback', params: filters ?? undefined }),
+      transformResponse: (value: Paginated<AdminProductFeedbackRow> | AdminProductFeedbackRow[], _meta, arg) =>
+        normalizePaginated(value, arg?.page, arg?.pageSize),
+      providesTags: ['ProductFeedback'],
+    }),
+    patchProductFeedbackStatus: build.mutation<AdminProductFeedbackRow, { id: string; status: ProductFeedbackStatus }>({
+      query: ({ id, status }) => ({
+        url: `/admin/product-feedback/${id}`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: ['ProductFeedback', 'Product'],
+    }),
+
+    getOrders: build.query<Paginated<AdminOrder>, { page?: number; pageSize?: number; status?: OrderStatus; q?: string } | void>({
+      query: (filters) => ({ url: '/admin/orders', params: filters ?? undefined }),
+      transformResponse: (value: Paginated<AdminOrder> | AdminOrder[], _meta, arg) =>
+        normalizePaginated(value, arg?.page, arg?.pageSize),
+      providesTags: ['Order'],
+    }),
+    getAdminOrder: build.query<AdminOrder, string>({
+      query: (id) => `/admin/orders/${id}`,
+      providesTags: (_result, _error, id) => [{ type: 'Order', id }],
+    }),
+    updateOrderStatus: build.mutation<AdminOrder, { id: string; status: OrderStatus }>({
+      query: ({ id, status }) => ({
+        url: `/admin/orders/${id}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: ['Order', 'Stats', 'Finance', 'Inventory'],
+    }),
+
+    getUsers: build.query<Paginated<TelegramUser>, { page?: number; pageSize?: number; q?: string } | void>({
+      query: (filters) => ({ url: '/admin/users', params: filters ?? undefined }),
+      transformResponse: (value: Paginated<TelegramUser> | TelegramUser[], _meta, arg) =>
+        normalizePaginated(value, arg?.page, arg?.pageSize),
+      providesTags: ['User'],
+    }),
+    getUserDetails360: build.query<UserDetail360, string>({
+      query: (userId) => `/admin/users/${encodeURIComponent(userId)}/details`,
+      providesTags: (_result, _error, id) => [{ type: 'UserDetail', id }],
+    }),
+
+    getNotifications: build.query<AdminNotificationItem[], void>({
+      query: () => '/admin/notifications',
+      providesTags: ['Notification'],
+    }),
+    markNotificationRead: build.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/admin/notifications/${id}/read`, method: 'POST' }),
+      invalidatesTags: ['Notification'],
+    }),
+    markAllNotificationsRead: build.mutation<{ ok: boolean }, void>({
+      query: () => ({ url: '/admin/notifications/read-all', method: 'POST' }),
+      invalidatesTags: ['Notification'],
+    }),
+
+    getFinanceReport: build.query<FinanceReport, { from?: string; to?: string } | void>({
+      query: (filters) => ({ url: '/admin/finance/report', params: filters ?? undefined }),
+      providesTags: ['Finance'],
+    }),
+
     getInventorySummary: build.query<InventorySummary, void>({
       query: () => '/admin/inventory/summary',
-      providesTags: [{ type: 'Inventory', id: 'SUMMARY' }],
+      providesTags: ['Inventory'],
     }),
     getInventoryLowStock: build.query<Product[], void>({
       query: () => '/admin/inventory/low-stock',
-      providesTags: [{ type: 'Inventory', id: 'LIST' }],
+      providesTags: ['Inventory'],
     }),
-    getInventoryMovements: build.query<
-      PaginatedResult<StockMovementRow>,
-      { page: number; pageSize: number }
-    >({
-      query: ({ page, pageSize }) => ({ url: '/admin/inventory/movements', params: { page, pageSize } }),
-      transformResponse: (response: unknown, _m, arg) =>
-        normalizePaginated<StockMovementRow>(response, {
-          page: arg.page,
-          pageSize: arg.pageSize,
-        }),
-      providesTags: [{ type: 'InventoryMovement', id: 'LIST' }],
+    getInventoryMovements: build.query<Paginated<InventoryMovementRow>, { page?: number; pageSize?: number } | void>({
+      query: (filters) => ({ url: '/admin/inventory/movements', params: filters ?? undefined }),
+      transformResponse: (value: Paginated<InventoryMovementRow> | InventoryMovementRow[], _meta, arg) =>
+        normalizePaginated(value, arg?.page, arg?.pageSize),
+      providesTags: ['InventoryMovement'],
     }),
-    adjustInventoryGrams: build.mutation<
-      { stockGrams: number },
-      { productId: string; deltaGrams: number; reason?: string }
-    >({
-      query: ({ productId, deltaGrams, reason }) => ({
-        url: `/admin/inventory/${productId}/grams`,
+    adjustInventory: build.mutation<{ stockQuantity: number }, { productId: string; delta: number; reason?: string }>({
+      query: ({ productId, ...body }) => ({
+        url: `/admin/inventory/${productId}/adjust`,
         method: 'POST',
-        body: { deltaGrams, reason },
+        body,
       }),
-      invalidatesTags: (_r, _e, { productId }) => [
-        { type: 'Product', id: productId },
-        { type: 'Product', id: 'LIST' },
-        { type: 'Inventory', id: 'LIST' },
-        { type: 'Inventory', id: 'SUMMARY' },
-        { type: 'InventoryMovement', id: 'LIST' },
-        'Stats',
-      ],
+      invalidatesTags: ['Inventory', 'InventoryMovement', 'Product'],
     }),
-    getUserDetails360: build.query<
-      {
-        user: TelegramUser & {
-          orders: AdminOrder[];
-          coinLedger: CoinLedgerRow[];
-          wishlistItems: Array<{ id: string; product: Product }>;
-          segmentMemberships: Array<{ segment: UserSegmentRow }>;
-          adminCoinGifts: AdminCoinGiftRow[];
-          productFeedbacks: Array<{
-            id: string;
-            stars: number;
-            comment: string;
-            status: ProductFeedbackStatus;
-            createdAt: string;
-            product: { title: string };
-          }>;
-          referralRewardsAsReferrer: Array<{
-            id: string;
-            coins: number;
-            createdAt: string;
-            referee: {
-              id: string;
-              firstName: string | null;
-              lastName: string | null;
-              telegramUsername: string | null;
-            };
-          }>;
-          referredBy: {
-            id: string;
-            firstName: string | null;
-            lastName: string | null;
-            telegramUsername: string | null;
-          } | null;
-          campaign: { id: string; slug: string; name: string } | null;
-          promoRedemptions: Array<{
-            id: string;
-            discountUzs: number;
-            redeemedAt: string;
-            promoCode: { code: string; kind: string; value: number };
-          }>;
-          cart: {
-            items: Array<{
-              id: string;
-              qty: number;
-              sizeSlug: string | null;
-              product: { title: string; priceUzs: number };
-            }>;
-          } | null;
-          _count: { orders: number; referrals: number; wishlistItems: number };
-        };
-        kpis: {
-          ordersCount: number;
-          deliveredOrders: number;
-          cancelledOrders: number;
-          ltvUzs: number;
-          aovUzs: number;
-          referralCount: number;
-          wishlistCount: number;
-          coinsLifetimeEarned: number;
-          coinsLifetimeSpent: number;
-          lastOrderAt: string | null;
-        };
-      },
-      string
-    >({
-      query: (userId) => `/admin/users/${userId}/details`,
-      providesTags: (_r, _e, userId) => [{ type: 'UserDetail', id: userId }],
+
+    getBroadcasts: build.query<BroadcastRow[], void>({
+      query: () => '/admin/broadcasts',
+      providesTags: ['Broadcast'],
+    }),
+    createBroadcast: build.mutation<BroadcastRow, { title: string; body: string; imageUrl?: string | null; targetUrl?: string | null }>({
+      query: (body) => ({ url: '/admin/broadcasts', method: 'POST', body }),
+      invalidatesTags: ['Broadcast'],
+    }),
+    sendBroadcastNow: build.mutation<{ sent: number; errors: number }, string>({
+      query: (id) => ({ url: `/admin/broadcasts/${id}/send`, method: 'POST' }),
+      invalidatesTags: ['Broadcast'],
+    }),
+
+    listAdminPanelUsers: build.query<Paginated<AdminPanelUserRow>, { page?: number; pageSize?: number; q?: string } | void>({
+      query: (filters) => ({ url: '/admin/settings/admin-users', params: filters ?? undefined }),
+      transformResponse: (value: Paginated<AdminPanelUserRow> | AdminPanelUserRow[], _meta, arg) =>
+        normalizePaginated(value, arg?.page, arg?.pageSize),
+      providesTags: ['AdminPanelUser'],
+    }),
+    getAdminPanelUser: build.query<AdminPanelUserDetail, string>({
+      query: (id) => `/admin/settings/admin-users/${id}`,
+      providesTags: (_result, _error, id) => [{ type: 'AdminPanelUser', id }],
+    }),
+    createAdminPanelUser: build.mutation<AdminPanelUserRow, { email: string; password: string; fullName?: string | null; isActive?: boolean }>({
+      query: (body) => ({ url: '/admin/settings/admin-users', method: 'POST', body }),
+      invalidatesTags: ['AdminPanelUser'],
+    }),
+    updateAdminPanelUser: build.mutation<AdminPanelUserRow, { id: string; email?: string; password?: string; fullName?: string | null; isActive?: boolean }>({
+      query: ({ id, ...body }) => ({ url: `/admin/settings/admin-users/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['AdminPanelUser'],
+    }),
+    deleteAdminPanelUser: build.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/admin/settings/admin-users/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['AdminPanelUser'],
     }),
   }),
 });
 
 export const {
-  useLoginMutation,
-  useGetMeQuery,
-  useListAdminPanelUsersQuery,
-  useGetAdminPanelUserQuery,
+  useAdjustInventoryMutation,
   useCreateAdminPanelUserMutation,
-  useUpdateAdminPanelUserMutation,
-  useDeleteAdminPanelUserMutation,
-  useSetAdminPanelUserPermissionsMutation,
-  useListRolesQuery,
-  useGetRoleQuery,
-  useCreateRoleMutation,
-  useUpdateRoleMutation,
-  useDeleteRoleMutation,
-  useSetRolePermissionsMutation,
-  useListPermissionsQuery,
-  useCreatePermissionMutation,
-  useUpdatePermissionMutation,
-  useDeletePermissionMutation,
-  useGetDashboardStatsQuery,
-  useGetInsightsFunnelQuery,
-  useGetInsightsAovLtvQuery,
-  useGetInsightsTopProductsQuery,
-  useGetInsightsSearchTermsQuery,
-  useGetSizePresetsQuery,
-  useCreateSizePresetMutation,
-  useUpdateSizePresetMutation,
-  useDeleteSizePresetMutation,
-  useGetProductsQuery,
-  useCreateProductMutation,
-  useUpdateProductMutation,
-  useDeleteProductMutation,
-  usePresignUploadMutation,
-  useGetFragranceFamiliesQuery,
-  useListProductFeedbackQuery,
-  usePatchProductFeedbackStatusMutation,
-  useGetOrdersQuery,
-  useGetAdminOrderQuery,
-  useUpdateOrderStatusMutation,
-  useGetUsersQuery,
-  useGetUserReferralTreeQuery,
-  useGetNotificationsQuery,
-  useMarkNotificationReadMutation,
-  useMarkAllNotificationsReadMutation,
-  useGetAdminRewardSettingsQuery,
-  usePatchAdminRewardSettingsMutation,
-  useGiftUserCoinsMutation,
-  useAdjustUserCoinsMutation,
-  useGetCoinGiftsQuery,
-  useGetCoinLedgerQuery,
-  useGetFinanceReportQuery,
-  useGetCampaignsQuery,
-  useCreateCampaignMutation,
-  useGetCampaignLinkHelpQuery,
-  useGetCampaignSlugCheckQuery,
-  useGetCampaignStatsQuery,
-  useGetCategoriesQuery,
-  useCreateCategoryMutation,
-  useGetBrandsQuery,
-  useCreateBrandMutation,
-  useGetAdminBannersQuery,
   useCreateBannerMutation,
-  useUpdateBannerMutation,
-  useDeleteBannerMutation,
-  useGetPromoCodesQuery,
-  useCreatePromoCodeMutation,
-  useGetSegmentsQuery,
-  useCreateSegmentMutation,
-  useSyncSegmentMembersMutation,
-  useAddSegmentMembersMutation,
-  useGetBroadcastsQuery,
   useCreateBroadcastMutation,
-  useSendBroadcastNowMutation,
+  useCreateCategoryMutation,
+  useCreateMeasurementUnitMutation,
+  useCreateProductMutation,
+  useDeleteAdminPanelUserMutation,
+  useDeleteBannerMutation,
+  useDeleteCategoryMutation,
+  useDeleteMeasurementUnitMutation,
+  useDeleteProductMutation,
+  useGetAdminBannersQuery,
+  useGetAdminOrderQuery,
+  useGetAdminPanelUserQuery,
+  useGetBroadcastsQuery,
+  useGetCategoriesQuery,
+  useGetDashboardOverviewQuery,
+  useGetDashboardStatsQuery,
+  useGetFinanceReportQuery,
   useGetInventoryLowStockQuery,
   useGetInventoryMovementsQuery,
   useGetInventorySummaryQuery,
-  useAdjustInventoryGramsMutation,
-  useGetDashboardOverviewQuery,
+  useGetMeQuery,
+  useGetMeasurementUnitsQuery,
+  useGetNotificationsQuery,
+  useGetOrdersQuery,
+  useGetProductsQuery,
   useGetUserDetails360Query,
+  useGetUsersQuery,
+  useListAdminPanelUsersQuery,
+  useListProductFeedbackQuery,
+  useLoginMutation,
+  useMarkAllNotificationsReadMutation,
+  useMarkNotificationReadMutation,
+  usePatchProductFeedbackStatusMutation,
+  usePresignUploadMutation,
+  useSendBroadcastNowMutation,
+  useUpdateAdminPanelUserMutation,
+  useUpdateBannerMutation,
+  useUpdateCategoryMutation,
+  useUpdateMeasurementUnitMutation,
+  useUpdateOrderStatusMutation,
+  useUpdateProductMutation,
 } = parfumApi;

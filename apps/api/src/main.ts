@@ -15,7 +15,7 @@ async function bootstrap() {
   } else {
     if (process.env.NODE_ENV === "production") {
       console.warn(
-        "[parfumbox-api] CORS_ORIGINS is not set in production. Reflecting request origin — set CORS_ORIGINS to the public web and admin URLs to lock this down.",
+        "[ansor-market-api] CORS_ORIGINS is not set in production. Reflecting request origin — set CORS_ORIGINS to the public web and admin URLs to lock this down.",
       );
     }
     app.enableCors({ origin: true, credentials: true });
@@ -31,8 +31,8 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle("Parfumbox API")
-    .setDescription("Telegram mini app, admin panel, and catalog API")
+    .setTitle("Ansor Market API")
+    .setDescription("Telegram mini app, admin panel, and halal market catalog API")
     .setVersion("1.0")
     .addBearerAuth({ type: "http", scheme: "bearer", bearerFormat: "JWT" }, "user-jwt")
     .addBearerAuth({ type: "http", scheme: "bearer", bearerFormat: "JWT" }, "admin-jwt")

@@ -1,6 +1,6 @@
 # Ansor Market TODO
 
-Last updated: 2026-06-22
+Last updated: 2026-06-24
 
 ## Immediate Rule
 
@@ -65,7 +65,7 @@ Last updated: 2026-06-22
 - [x] Adapt broadcast to all users without segments.
 - [x] Adapt admin users to Super Admin only.
 - [x] Remove inactive backend modules from `AppModule` after dependencies are gone.
-- [ ] Delete/archive inactive Parfumbox backend modules after frontend/admin contracts are migrated.
+- [x] Delete/archive inactive Parfumbox backend modules after frontend/admin contracts are migrated.
 
 ### Backend env/tests
 
@@ -123,51 +123,60 @@ Last updated: 2026-06-22
 
 ### RTK Query/routes/nav
 
-- [ ] Update `apps/admin/src/app/parfumApi.ts` for Ansor API contracts.
-- [ ] Remove endpoints/types for coins, rewards, campaigns, segments, automations, brands, fragrance families, roles, permissions.
-- [ ] Add measurement unit endpoints.
-- [ ] Rename UZS fields to KRW fields.
-- [ ] Simplify route guards/nav for Super Admin only.
-- [ ] Remove inactive routes from `apps/admin/src/app/App.tsx`.
-- [ ] Update sidebar sections in `adminNavSections.ts`.
+- [x] Update `apps/admin/src/app/parfumApi.ts` for Ansor API contracts.
+- [x] Remove endpoints/types for coins, rewards, campaigns, segments, automations, brands, fragrance families, roles, permissions.
+- [x] Add measurement unit endpoints.
+- [x] Rename UZS fields to KRW fields.
+- [x] Simplify route guards/nav for Super Admin only.
+- [x] Remove inactive routes from `apps/admin/src/app/App.tsx`.
+- [x] Update sidebar sections in `adminNavSections.ts`.
 
 ### Pages
 
-- [ ] Dashboard: replace coin/referral/campaign KPIs with Ansor KPIs.
-- [ ] Orders: show KRW totals, address snapshot, user info, items, status update including `PREPARING`.
-- [ ] Products: remove perfume fields; add unit, stock, sale/bestseller, active status, max 2 images.
-- [ ] Measurement Units: replace Size Presets page.
-- [ ] Categories: keep/adapt existing page.
-- [ ] Banners: keep/adapt existing page.
-- [ ] Product Feedback: keep moderation and rating recompute.
-- [ ] Users: remove coin/referral/campaign/tier; show order stats and saved addresses.
-- [ ] User Detail: adapt rich profile to Ansor stats.
-- [ ] Finance: remove coin economy and show KRW revenue/order/top product/category metrics.
-- [ ] Broadcast: send to all users, no segmentation.
-- [ ] Inventory: stock quantity, low stock, manual adjustment, movements.
-- [ ] Admin Users: email/password/fullName/isActive only; no role/permission assignment.
-- [ ] Run `pnpm --filter admin build`.
+- [x] Dashboard: replace coin/referral/campaign KPIs with Ansor KPIs.
+- [x] Orders: show KRW totals, address snapshot, user info, items, status update including `PREPARING`.
+- [x] Products: remove perfume fields; add unit, stock, sale/bestseller, active status, max 2 images.
+- [x] Measurement Units: replace Size Presets page.
+- [x] Categories: keep/adapt existing page.
+- [x] Banners: keep/adapt existing page.
+- [x] Product Feedback: keep moderation and rating recompute.
+- [x] Users: remove coin/referral/campaign/tier; show order stats and saved addresses.
+- [x] User Detail: adapt rich profile to Ansor stats.
+- [x] Finance: remove coin economy and show KRW revenue/order/top product/category metrics.
+- [x] Broadcast: send to all users, no segmentation.
+- [x] Inventory: stock quantity, low stock, manual adjustment, movements.
+- [x] Admin Users: email/password/fullName/isActive only; no role/permission assignment.
+- [x] Run `pnpm --filter admin build`.
 
 ## Phase 4 - Realtime Notifications
 
-- [ ] Keep `/admin` Socket.IO namespace auth and events.
-- [ ] Keep `/user` Socket.IO namespace auth and user rooms.
-- [ ] Ensure order creation creates and emits admin notification.
-- [ ] Ensure status change creates user notification and emits user order update.
-- [ ] Ensure admin orders list and notification bell invalidate on realtime events.
-- [ ] Ensure Telegram app unread count updates by polling or socket invalidation.
-- [ ] Remove Telegram coin gift notification code.
+- [x] Keep `/admin` Socket.IO namespace auth and events.
+- [x] Keep `/user` Socket.IO namespace auth and user rooms.
+- [x] Verify or add active backend admin customer endpoints for `/admin/users` and `/admin/users/:id/details`.
+- [x] Ensure order creation creates and emits admin notification in existing `OrderEventsService` pattern.
+- [x] Ensure status change creates user notification and emits user order update in source.
+- [x] Ensure admin orders list and notification bell invalidate on realtime events in source.
+- [x] Ensure Telegram app unread count updates through existing notification polling/tag invalidation path.
+- [x] Remove Telegram coin gift notification code from active notification kinds/flows.
+- [ ] Live smoke-test admin login with a reachable Ansor database.
+- [ ] Live smoke-test dashboard with `/admin/stats/dashboard`.
+- [ ] Live smoke-test product/category/measurement-unit CRUD.
+- [ ] Live smoke-test order status update including `PREPARING`.
+- [ ] Live smoke-test admin notification bell read/invalidation.
+- [ ] Live smoke-test user order/status notifications and `/user` socket event delivery.
+- [ ] Live smoke-test broadcast send.
+- [ ] Live smoke-test inventory adjustment.
 - [ ] Add/adjust tests around `OrderEventsService` and notification services.
 
 ## Phase 5 - Cleanup
 
-- [ ] Search for and remove visible `Parfumbox`, `Aromus`, `parfum`, `perfume` branding/copy.
-- [ ] Search for and remove `UZS`, `priceUzs`, `oldPriceUzs`, `unitPriceUzs`, `subtotalUzs`, `totalUzs` after KRW migration.
-- [ ] Search for and remove remaining active `coin`, `referral`, `reward`, `campaign`, `segment`, `automation`, `brand`, `fragrance` references unless intentionally retained in archived migration history.
-- [ ] Update `.env.example` files.
-- [ ] Update README/docs if needed.
-- [ ] Remove dead imports/routes/components/styles.
-- [ ] Run full verification:
+- [x] Search for and remove visible `Parfumbox`, `Aromus`, `parfum`, `perfume` branding/copy from active source/env examples/README. Historical migrations intentionally remain.
+- [x] Search for and remove `UZS`, `priceUzs`, `oldPriceUzs`, `unitPriceUzs`, `subtotalUzs`, `totalUzs` after KRW migration from active source/env examples/README. Historical migrations intentionally remain.
+- [x] Search for and remove remaining active `coin`, `referral`, `reward`, `campaign`, `segment`, `automation`, `brand`, `fragrance` references unless intentionally retained in archived migration history.
+- [x] Update `.env.example` files.
+- [x] Update README/docs if needed.
+- [x] Remove dead imports/routes/components/styles.
+- [x] Run full verification:
 
 ```bash
 pnpm install
@@ -176,21 +185,40 @@ pnpm --filter web build
 pnpm --filter admin build
 ```
 
+## Phase 6 - Live Runtime Verification
+
+- [ ] Make a reachable Ansor test database available through Docker test Postgres or `apps/api/.env`.
+- [ ] Run `pnpm --filter api db:migrate`.
+- [ ] Run `pnpm --filter api db:seed`.
+- [ ] Live smoke-test admin login.
+- [ ] Live smoke-test dashboard via `/admin/stats/dashboard`.
+- [ ] Live smoke-test product CRUD.
+- [ ] Live smoke-test category CRUD.
+- [ ] Live smoke-test measurement-unit CRUD.
+- [ ] Live smoke-test order status update to `PREPARING`.
+- [ ] Live smoke-test admin notification bell read/invalidation.
+- [ ] Live smoke-test user order/status notifications and `/user` socket event delivery.
+- [ ] Live smoke-test broadcast send.
+- [ ] Live smoke-test inventory adjustment.
+- [ ] Live smoke-test `/admin` Socket.IO event delivery.
+- [ ] Run `pnpm --filter api test` if feasible.
+- [ ] Run `pnpm --filter api test:e2e` if database setup is available.
+
 ## Documentation Maintenance
 
 At the end of each major task:
 
-- [ ] Update `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md` if plan changes.
-- [ ] Update `docs/ANSOR_MARKET_PROJECT_STATE.md` with:
+- [x] Update `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md` if plan changes.
+- [x] Update `docs/ANSOR_MARKET_PROJECT_STATE.md` with:
   - completed work
   - files changed
   - remaining work
   - build/test status
   - known issues
   - next exact steps
-- [ ] Update `docs/ANSOR_MARKET_TODO.md` checkboxes.
-- [ ] Write the next exact Codex prompt.
+- [x] Update `docs/ANSOR_MARKET_TODO.md` checkboxes.
+- [x] Write the next exact Codex prompt.
 
 ## Next Exact Prompt To Run
 
-Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-22 Phase 2 Telegram Mini App checkpoint. Start Phase 3 admin refactor only: update `apps/admin/src/app/parfumApi.ts`, admin navigation/routes, dashboard, orders, product settings, users, finance, broadcast, inventory, and admin users to match the Ansor Market backend contracts (`priceKrw`, `MeasurementUnit`, `stockQuantity`, `UserAddress`, Super Admin only, no coins/referrals/rewards/campaigns/segments/brands/fragrance/size presets/RBAC pages). Preserve the existing Mantine admin style. After changes, run `pnpm --filter admin build`, update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-24 Phase 5 Cleanup checkpoint. First make a reachable Ansor test database available by starting Docker Desktop for Docker test Postgres or by creating a valid `apps/api/.env` with `DATABASE_URL`, `JWT_SECRET`, and `ADMIN_JWT_SECRET`. Then run `pnpm --filter api db:migrate` and `pnpm --filter api db:seed`. Start the API/admin/web as needed and live smoke-test admin login, `/admin/stats/dashboard`, product/category/measurement-unit CRUD, order status update to `PREPARING`, admin notification bell read/invalidation, user order/status notifications, broadcast send, inventory adjustment, and `/admin` + `/user` Socket.IO event delivery. If smoke passes, run `pnpm --filter api test` and `pnpm --filter api test:e2e` if feasible. Preserve existing architecture/UI/realtime patterns and update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.

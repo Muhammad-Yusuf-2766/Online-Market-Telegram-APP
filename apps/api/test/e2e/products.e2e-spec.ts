@@ -21,7 +21,7 @@ describe("Products (e2e)", () => {
   it("GET /products lists catalog", async () => {
     const res = await request(ctx.app.getHttpServer()).get("/products").expect(200);
     expect(res.body.total).toBeGreaterThanOrEqual(1);
-    expect(res.body.items[0].title).toBe("E2E Test Perfume");
+    expect(res.body.items[0].title).toBe("E2E Test Halal Product");
   });
 
   it("GET /products/:id returns product detail", async () => {
