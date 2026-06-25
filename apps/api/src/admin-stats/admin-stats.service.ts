@@ -58,7 +58,7 @@ export type DashboardOverviewResult = {
 export class AdminStatsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getDashboardStats(fromIso: string, toIso: string): Promise<DashboardStatsResult> {
+  async getDashboardStats(fromIso?: string, toIso?: string): Promise<DashboardStatsResult> {
     const { from, to } = this.parseRange(fromIso, toIso);
     const [productCount, orders, newUsersInRange] = await Promise.all([
       this.prisma.product.count(),
@@ -206,9 +206,11 @@ export class AdminStatsService {
     };
   }
 
-  private parseRange(fromIso: string, toIso: string): { from: Date; to: Date } {
-    const from = this.startOfUtcDay(new Date(fromIso));
-    const to = this.endOfUtcDay(new Date(toIso));
+  private parseRange(fromIso?: string, toIso?: string): { from: Date; to: Date } {
+    const today = new Date();
+    const defaultFrom = new Date(Date.now() - 13 * 86_400_000);
+    const from = this.startOfUtcDay(fromIso ? new Date(fromIso) : defaultFrom);
+    const to = this.endOfUtcDay(toIso ? new Date(toIso) : today);
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
       throw new BadRequestException("Invalid date range");
     }

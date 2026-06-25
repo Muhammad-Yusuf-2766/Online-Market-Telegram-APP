@@ -41,7 +41,21 @@ export function useAdminOrdersRealtime(): void {
     });
 
     socket.on('notifications:new', (payload: AdminNotificationNewPayload) => {
-      dispatch(parfumApi.util.invalidateTags([{ type: 'Notification', id: 'LIST' }]));
+      dispatch(
+        parfumApi.util.updateQueryData('getNotifications', undefined, (draft) => {
+          if (draft.some((notification) => notification.id === payload.id)) {
+            return;
+          }
+          draft.unshift({
+            id: payload.id,
+            kind: payload.kind,
+            orderId: payload.orderId,
+            read: false,
+            createdAt: payload.createdAt,
+          });
+        }),
+      );
+      dispatch(parfumApi.util.invalidateTags(['Notification']));
       showAdminNotificationToast(payload);
     });
 

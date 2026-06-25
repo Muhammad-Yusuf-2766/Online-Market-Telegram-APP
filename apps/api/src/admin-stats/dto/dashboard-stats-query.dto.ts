@@ -1,12 +1,14 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsDateString } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsDateString, IsOptional } from "class-validator";
 
 export class DashboardStatsQueryDto {
-  @ApiProperty({ example: "2026-04-01" })
+  @ApiPropertyOptional({ example: "2026-04-01" })
+  @IsOptional()
   @IsDateString()
-  from!: string;
+  from?: string;
 
-  @ApiProperty({ example: "2026-04-12" })
+  @ApiPropertyOptional({ example: "2026-04-12" })
+  @IsOptional()
   @IsDateString()
-  to!: string;
+  to?: string;
 }

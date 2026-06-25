@@ -1,6 +1,6 @@
 # Ansor Market TODO
 
-Last updated: 2026-06-24
+Last updated: 2026-06-25
 
 ## Immediate Rule
 
@@ -73,7 +73,7 @@ Last updated: 2026-06-24
 - [ ] Update API unit tests for products/orders/users/inventory/notifications.
 - [ ] Update API e2e tests for auth/products/cart/orders.
 - [x] Run `pnpm --filter api build`.
-- [ ] Run `pnpm --filter api test` if feasible.
+- [x] Run `pnpm --filter api test` if feasible.
 - [ ] Run `pnpm --filter api test:e2e` if database setup is available.
 
 ## Phase 2 - Telegram Mini App
@@ -158,14 +158,14 @@ Last updated: 2026-06-24
 - [x] Ensure admin orders list and notification bell invalidate on realtime events in source.
 - [x] Ensure Telegram app unread count updates through existing notification polling/tag invalidation path.
 - [x] Remove Telegram coin gift notification code from active notification kinds/flows.
-- [ ] Live smoke-test admin login with a reachable Ansor database.
-- [ ] Live smoke-test dashboard with `/admin/stats/dashboard`.
-- [ ] Live smoke-test product/category/measurement-unit CRUD.
-- [ ] Live smoke-test order status update including `PREPARING`.
-- [ ] Live smoke-test admin notification bell read/invalidation.
-- [ ] Live smoke-test user order/status notifications and `/user` socket event delivery.
-- [ ] Live smoke-test broadcast send.
-- [ ] Live smoke-test inventory adjustment.
+- [x] Live smoke-test admin login with a reachable Ansor database.
+- [x] Live smoke-test dashboard with `/admin/stats/dashboard`.
+- [x] Live smoke-test product/category/measurement-unit CRUD.
+- [x] Live smoke-test order status update including `PREPARING`.
+- [x] Live smoke-test admin notification bell read/invalidation.
+- [x] Live smoke-test user order/status notifications and `/user` socket event delivery.
+- [x] Live smoke-test broadcast send.
+- [x] Live smoke-test inventory adjustment.
 - [ ] Add/adjust tests around `OrderEventsService` and notification services.
 
 ## Phase 5 - Cleanup
@@ -187,22 +187,39 @@ pnpm --filter admin build
 
 ## Phase 6 - Live Runtime Verification
 
-- [ ] Make a reachable Ansor test database available through Docker test Postgres or `apps/api/.env`.
-- [ ] Run `pnpm --filter api db:migrate`.
-- [ ] Run `pnpm --filter api db:seed`.
-- [ ] Live smoke-test admin login.
-- [ ] Live smoke-test dashboard via `/admin/stats/dashboard`.
-- [ ] Live smoke-test product CRUD.
-- [ ] Live smoke-test category CRUD.
-- [ ] Live smoke-test measurement-unit CRUD.
-- [ ] Live smoke-test order status update to `PREPARING`.
-- [ ] Live smoke-test admin notification bell read/invalidation.
-- [ ] Live smoke-test user order/status notifications and `/user` socket event delivery.
-- [ ] Live smoke-test broadcast send.
-- [ ] Live smoke-test inventory adjustment.
-- [ ] Live smoke-test `/admin` Socket.IO event delivery.
-- [ ] Run `pnpm --filter api test` if feasible.
+- [x] Make a reachable Ansor test database available through Docker test Postgres or `apps/api/.env`.
+- [x] Run `pnpm --filter api db:migrate`.
+- [x] Run `pnpm --filter api db:seed`.
+- [x] Live smoke-test admin login.
+- [x] Live smoke-test dashboard via `/admin/stats/dashboard`.
+- [x] Live smoke-test product CRUD.
+- [x] Live smoke-test category CRUD.
+- [x] Live smoke-test measurement-unit CRUD.
+- [x] Live smoke-test order status update to `PREPARING`.
+- [x] Live smoke-test admin notification bell read/invalidation.
+- [x] Live smoke-test user order/status notifications and `/user` socket event delivery.
+- [x] Live smoke-test broadcast send.
+- [x] Live smoke-test inventory adjustment.
+- [x] Live smoke-test `/admin` Socket.IO event delivery.
+- [x] Run `pnpm --filter api test` if feasible.
 - [ ] Run `pnpm --filter api test:e2e` if database setup is available.
+
+## 2026-06-25 Runtime Bugfixes
+
+- [x] Fix admin notification bell unread badge live update on `notifications:new`.
+- [x] Preserve admin notification toast and sound behavior.
+- [x] Fix admin Broadcasts / Xabar tarqatish page crash with current paginated backend response.
+- [x] Keep broadcasts as all-user messages only; do not reintroduce segment/campaign logic.
+- [x] Force Telegram order status bot messages to Uzbek regardless of user locale.
+- [x] Run `pnpm --filter api build`.
+- [x] Run `pnpm --filter web build`.
+- [x] Run `pnpm --filter admin build`.
+- [x] Run `pnpm --filter api test`.
+- [x] Smoke verify admin notification realtime payload and unread backend state.
+- [x] Smoke verify broadcast list/create/send.
+- [x] Smoke verify order status update still works.
+- [x] Smoke verify generated Telegram order status copy is Uzbek.
+- [ ] Manually confirm admin bell visual badge increments in the browser without reload after restarting/running the local stack.
 
 ## Documentation Maintenance
 
@@ -221,4 +238,4 @@ At the end of each major task:
 
 ## Next Exact Prompt To Run
 
-Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-24 Phase 5 Cleanup checkpoint. First make a reachable Ansor test database available by starting Docker Desktop for Docker test Postgres or by creating a valid `apps/api/.env` with `DATABASE_URL`, `JWT_SECRET`, and `ADMIN_JWT_SECRET`. Then run `pnpm --filter api db:migrate` and `pnpm --filter api db:seed`. Start the API/admin/web as needed and live smoke-test admin login, `/admin/stats/dashboard`, product/category/measurement-unit CRUD, order status update to `PREPARING`, admin notification bell read/invalidation, user order/status notifications, broadcast send, inventory adjustment, and `/admin` + `/user` Socket.IO event delivery. If smoke passes, run `pnpm --filter api test` and `pnpm --filter api test:e2e` if feasible. Preserve existing architecture/UI/realtime patterns and update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-25 Admin Notifications, Broadcasts, and Uzbek Bot Messages Bugfix checkpoint. Do not restart from scratch. First manually re-check the admin browser with the local API/admin/web/Telegram Mini App stack: create an order from Telegram, confirm the admin toast, notification sound, and bell unread badge update immediately; open Broadcasts/Xabar tarqatish and list/create/send a broadcast; change an order status and confirm the Telegram bot message is Uzbek. Then make the dedicated API e2e database available at `localhost:5433` for `ansor_market_test` or intentionally update the isolated e2e DB configuration, run `pnpm --filter api test:e2e`, and fix any real e2e failures. Update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.

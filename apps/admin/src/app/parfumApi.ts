@@ -523,7 +523,7 @@ export const parfumApi = createApi({
 
     getNotifications: build.query<AdminNotificationItem[], void>({
       query: () => '/admin/notifications',
-      providesTags: ['Notification'],
+      providesTags: ['Notification', { type: 'Notification', id: 'LIST' }],
     }),
     markNotificationRead: build.mutation<{ ok: boolean }, string>({
       query: (id) => ({ url: `/admin/notifications/${id}/read`, method: 'POST' }),
@@ -564,6 +564,8 @@ export const parfumApi = createApi({
 
     getBroadcasts: build.query<BroadcastRow[], void>({
       query: () => '/admin/broadcasts',
+      transformResponse: (value: Paginated<BroadcastRow> | BroadcastRow[]) =>
+        normalizePaginated(value).items,
       providesTags: ['Broadcast'],
     }),
     createBroadcast: build.mutation<BroadcastRow, { title: string; body: string; imageUrl?: string | null; targetUrl?: string | null }>({

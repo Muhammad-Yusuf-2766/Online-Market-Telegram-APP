@@ -1,7 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { OrderStatus } from "@prisma/client";
-import { normalizeUserLocale } from "../common/locale.util";
 import { buildOrderStatusNotifyContent } from "./order-status-messages";
 import { resolveTelegramImageUrl } from "./resolve-telegram-image-url";
 
@@ -25,14 +24,14 @@ export class TelegramNotifyService {
   }
 
   /**
-   * Sends a message in the user’s locale (`ru` | `uz`) with optional product photo
-   * (`sendPhoto`) and Mini App button. `productImageRaw` is the first image from DB (URL or MinIO key).
+   * Sends an Uzbek status message with optional product photo (`sendPhoto`) and Mini App button.
+   * `productImageRaw` is the first image from DB (URL or MinIO key).
    */
   async notifyOrderStatusChanged(
     telegramId: string,
     orderId: string,
     status: OrderStatus,
-    userLocale: string | null | undefined,
+    _userLocale: string | null | undefined,
     productImageRaw?: string | null,
   ): Promise<void> {
     const token = this.config.get<string>("TELEGRAM_BOT_TOKEN");
@@ -41,8 +40,7 @@ export class TelegramNotifyService {
       return;
     }
 
-    const lang = normalizeUserLocale(userLocale);
-    const { textLines, openOrderLabel } = buildOrderStatusNotifyContent(lang, orderId, status);
+    const { textLines, openOrderLabel } = buildOrderStatusNotifyContent("uz", orderId, status);
 
     const detailUrl = this.orderDetailUrl(orderId);
     const lines = [...textLines];

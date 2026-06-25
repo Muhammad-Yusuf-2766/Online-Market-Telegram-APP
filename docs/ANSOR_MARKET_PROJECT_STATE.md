@@ -1,6 +1,247 @@
 # Ansor Market Project State
 
-Last updated: 2026-06-24
+Last updated: 2026-06-25
+
+## 2026-06-25 Admin Notifications, Broadcasts, and Uzbek Bot Messages Bugfix Checkpoint
+
+### Completed
+
+- Continued from the 2026-06-24 Phase 6 Migration Fix and Live Runtime Verification checkpoint.
+- Fixed admin notification bell live unread updates:
+  - preserved existing realtime toast and notification sound behavior
+  - `notifications:new` now patches the admin `getNotifications` RTK Query cache immediately with the unread notification payload
+  - notification cache invalidation now also uses the general `Notification` tag that the bell query actually provides
+- Fixed admin Broadcasts / Xabar tarqatish page crash:
+  - backend already returned a successful paginated response
+  - admin RTK Query now normalizes `GET /admin/broadcasts` from `{ items, total, page, pageSize }` to `BroadcastRow[]` for the existing page
+  - no segment/campaign logic was reintroduced
+- Fixed Telegram order status bot messages:
+  - backend now always generates Uzbek order-status bot copy regardless of `User.locale`
+  - smoke verified Uzbek content even for a test user with `locale = "ru"`
+- Confirmed existing order realtime and notification flows still work through focused smoke.
+
+### Files Changed This Session
+
+Admin:
+
+- `apps/admin/src/app/parfumApi.ts`
+- `apps/admin/src/features/orders/useAdminOrdersRealtime.ts`
+
+Backend:
+
+- `apps/api/src/telegram/telegram-notify.service.ts`
+
+Docs:
+
+- `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`
+- `docs/ANSOR_MARKET_PROJECT_STATE.md`
+- `docs/ANSOR_MARKET_TODO.md`
+
+### Build/Test Status
+
+Run and passed:
+
+```bash
+pnpm --filter api build
+pnpm --filter web build
+pnpm --filter admin build
+pnpm --filter api test
+```
+
+Notes:
+
+- Initial `pnpm --filter api build` failed with a Windows `EPERM` while Prisma tried to replace `query_engine-windows.dll.node`.
+- Cause: local API dev/built processes were still holding the Prisma query engine DLL.
+- Stopped the API processes and reran `pnpm --filter api build`; it passed.
+- Web build passed.
+- Admin build passed with the existing large chunk/plugin timing warnings.
+- API unit tests passed: 10 suites, 42 tests.
+
+Focused smoke run against built API:
+
+- Passed 11 checks, failed 0.
+- Verified:
+  - API health
+  - admin login
+  - `/admin` socket connection
+  - user order creation
+  - admin `notifications:new` realtime payload
+  - admin unread notification backend state increased
+  - broadcast list backend shape
+  - broadcast create/send
+  - order status update to `PREPARING`
+  - Uzbek Telegram status-copy generation
+
+Not run:
+
+```bash
+pnpm --filter api test:e2e
+```
+
+Reason:
+
+- Same existing blocker remains: dedicated e2e Postgres database `ansor_market_test` at `localhost:5433` is unavailable.
+
+### Known Issues
+
+- API e2e tests remain blocked by unavailable `localhost:5433` test database.
+- The focused smoke verified the realtime event and backend unread state; final visual confirmation of the admin bell badge should be done in the running browser/admin UI after restarting the API/dev stack if needed.
+- Smoke created disposable `bugfix-*` local dev records and a broadcast in the `ansor_market` database.
+- Internal compatibility identifiers remain:
+  - `parfumApi` RTK Query file/slice names
+  - Mantine `parfum` color token
+
+### Next Exact Steps
+
+1. Restart the local API dev process if it was stopped for build verification:
+   - `pnpm --filter api start:dev`
+2. Manually confirm in the admin browser:
+   - user creates order
+   - toast appears
+   - notification sound plays
+   - notification bell unread badge increments immediately without page reload
+3. Manually confirm Broadcasts / Xabar tarqatish page opens and can list/create/send broadcasts.
+4. Manually confirm an admin order status update sends Uzbek Telegram bot copy.
+5. Restore the dedicated e2e database on `localhost:5433` and run:
+   - `pnpm --filter api test:e2e`
+
+### Next Exact Prompt
+
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-25 Admin Notifications, Broadcasts, and Uzbek Bot Messages Bugfix checkpoint. Do not restart from scratch. First manually re-check the admin browser with the local API/admin/web/Telegram Mini App stack: create an order from Telegram, confirm the admin toast, notification sound, and bell unread badge update immediately; open Broadcasts/Xabar tarqatish and list/create/send a broadcast; change an order status and confirm the Telegram bot message is Uzbek. Then make the dedicated API e2e database available at `localhost:5433` for `ansor_market_test` or intentionally update the isolated e2e DB configuration, run `pnpm --filter api test:e2e`, and fix any real e2e failures. Update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.
+
+## 2026-06-24 Phase 6 Migration Fix and Live Runtime Verification Checkpoint
+
+### Completed
+
+- Continued from the 2026-06-24 Phase 5 Cleanup checkpoint.
+- Confirmed `apps/api/.env` now exists and points to a reachable local PostgreSQL `ansor_market` database on `localhost:5432`.
+- Fixed the Prisma migration strategy for a clean local/dev Ansor Market baseline:
+  - moved historical Parfumbox migrations out of active `apps/api/prisma/migrations`
+  - kept the active migration chain as one fresh Ansor baseline: `20260622193000_ansor_market_baseline`
+  - added `apps/api/prisma/migrations_archive/README.md` explaining that production Parfumbox data migration would need a separate plan
+- Validated Prisma schema with `pnpm --filter api exec prisma validate`.
+- Reset the local `ansor_market` database with `prisma migrate reset --force --skip-seed`.
+- Ran the required DB commands successfully:
+  - `pnpm --filter api db:migrate`
+  - `pnpm --filter api db:seed`
+- Fixed two live runtime issues found during smoke testing:
+  - `/admin/stats/dashboard` no longer requires `from` and `to`; omitted dates default to the last 14 UTC days.
+  - `/admin` and `/user` Socket.IO gateways now verify JWTs with their namespace-specific secrets instead of relying on ambiguous imported `JwtService` configuration.
+- Updated the stale cart unit test mock for the current active-product stock check.
+- Live-smoked the migrated local API successfully:
+  - admin login and `/admin/auth/me`
+  - `/admin/stats/dashboard`
+  - product CRUD
+  - category CRUD
+  - measurement-unit CRUD
+  - order creation and status update to `PREPARING`
+  - admin notification bell read
+  - user order/status notification read
+  - broadcast create/send
+  - inventory adjustment
+  - `/admin` Socket.IO `orders:changed` and `notifications:new`
+  - `/user` Socket.IO `order:update` and `product:stock`
+
+### Files Changed This Session
+
+Prisma migrations:
+
+- `apps/api/prisma/migrations/20260412120000_init/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260419130000_admin_notifications/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260419140000_product_sizes/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260419180000_presets_price_uzs/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260419193000_order_delivery_coordinates/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260420120000_user_locale/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260501120000_coins_referrals_finance/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260502120000_profile_full_and_coin_notify/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260503120000_product_feedback_ratings/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260507210500_analytics_and_server_cart/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260507220000_phase2_phase3_schema_alignment/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260508000000_inventory_grams_and_movement_grams/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260516120000_add_banners_and_user_notifications/migration.sql` moved to archive
+- `apps/api/prisma/migrations/20260516120000_add_rbac/migration.sql` moved to archive
+- `apps/api/prisma/migrations_archive/README.md`
+- `apps/api/prisma/migrations_archive/20260624_parfumbox_legacy/**`
+
+Backend:
+
+- `apps/api/src/admin-stats/admin-stats.service.ts`
+- `apps/api/src/admin-stats/dto/dashboard-stats-query.dto.ts`
+- `apps/api/src/realtime/admin-orders.gateway.ts`
+- `apps/api/src/realtime/user-orders.gateway.ts`
+- `apps/api/src/cart/cart.service.spec.ts`
+
+Docs:
+
+- `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`
+- `docs/ANSOR_MARKET_PROJECT_STATE.md`
+- `docs/ANSOR_MARKET_TODO.md`
+
+### Build/Test Status
+
+Run and passed:
+
+```bash
+pnpm install
+pnpm --filter api exec prisma validate
+pnpm --filter api db:migrate
+pnpm --filter api db:seed
+pnpm --filter api build
+pnpm --filter web build
+pnpm --filter admin build
+pnpm --filter api test
+```
+
+Database reset run before migrate/seed:
+
+```bash
+pnpm --filter api exec prisma migrate reset --force --skip-seed
+```
+
+Live smoke result:
+
+- Passed 21 checks, failed 0.
+- `/admin` socket received 4 captured events.
+- `/user` socket received 6 captured events.
+
+Run and failed:
+
+```bash
+pnpm --filter api test:e2e
+```
+
+Exact blocker:
+
+- The e2e setup uses `postgresql://postgres:postgres@localhost:5433/ansor_market_test?schema=public`.
+- No reachable PostgreSQL test database is available on `localhost:5433`, so every e2e spec fails during `npx prisma migrate deploy` with Prisma schema engine failure.
+- This is separate from the working local dev database on `localhost:5432/ansor_market`, which migrated, seeded, and passed live smoke.
+
+Warnings:
+
+- Prisma still warns that `package.json#prisma` config is deprecated for Prisma 7.
+- Admin Vite build still warns about chunks larger than 500 kB.
+
+### Known Issues
+
+- Dedicated API e2e database on `localhost:5433` is unavailable; `pnpm --filter api test:e2e` remains blocked until Docker test Postgres is running or the e2e DB target is intentionally changed.
+- Live smoke created disposable `smoke-*` users, categories, units, products, orders, notifications, broadcasts, and inventory movements in the local `ansor_market` dev database.
+- Internal compatibility identifiers remain:
+  - `parfumApi` RTK Query file/slice names
+  - Mantine `parfum` color token
+  These are not visible UI copy and should only be renamed in a separate low-risk cleanup if desired.
+
+### Next Exact Steps
+
+1. Start or create a dedicated test PostgreSQL database at `localhost:5433` for `ansor_market_test`, or deliberately update e2e test configuration to use another isolated test DB.
+2. Run:
+   - `pnpm --filter api test:e2e`
+3. Optionally add a reusable checked-in smoke script for the Phase 6 runtime checks.
+4. Optionally clean disposable `smoke-*` records from the local dev database or reset/reseed it again before manual UI QA.
+5. Continue manual browser QA for the admin and Telegram Mini App UI using the now-migrated backend.
+
+### Next Exact Prompt
+
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-24 Phase 6 Migration Fix and Live Runtime Verification checkpoint. Do not restart from scratch. First make the dedicated API e2e database available at `localhost:5433` for `ansor_market_test` or intentionally update the isolated e2e DB configuration. Then run `pnpm --filter api test:e2e` and fix any real e2e failures. After that, perform manual browser QA for the admin and Telegram Mini App against the migrated local backend, focusing on checkout/address UX, notification UI badges, product settings forms, and order management. Preserve the existing Parfumbox-derived architecture/UI patterns and update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.
 
 ## 2026-06-24 Phase 4 DB Blocker and Phase 5 Cleanup Checkpoint
 

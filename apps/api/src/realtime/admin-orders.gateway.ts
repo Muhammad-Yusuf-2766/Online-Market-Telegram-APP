@@ -1,4 +1,5 @@
 import { Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import {
   OnGatewayConnection,
@@ -39,6 +40,7 @@ export class AdminOrdersGateway implements OnGatewayConnection {
 
   constructor(
     private readonly jwt: JwtService,
+    private readonly config: ConfigService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -61,7 +63,9 @@ export class AdminOrdersGateway implements OnGatewayConnection {
 
     let payload: JwtAdminPayload;
     try {
-      payload = await this.jwt.verifyAsync<JwtAdminPayload>(rawToken);
+      payload = await this.jwt.verifyAsync<JwtAdminPayload>(rawToken, {
+        secret: this.config.getOrThrow<string>("ADMIN_JWT_SECRET"),
+      });
     } catch {
       this.logger.warn("Socket rejected: invalid token");
       client.disconnect(true);

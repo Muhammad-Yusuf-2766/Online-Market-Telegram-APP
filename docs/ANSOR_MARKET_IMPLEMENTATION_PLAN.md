@@ -1,6 +1,6 @@
 # Ansor Market Implementation Plan
 
-Last updated: 2026-06-24
+Last updated: 2026-06-25
 
 ## Current Baseline
 
@@ -34,7 +34,22 @@ The main refactor should preserve these patterns and remove only the perfume/rew
   - stale visible/source Parfumbox, perfume, UZS, coin, referral, campaign, segment, automation, reward, brand, fragrance, size-preset, and RBAC cleanup was completed for active source/env examples/README
   - active-source grep now only finds removed terminology in historical Prisma migration files
   - `pnpm install`, `pnpm --filter api build`, `pnpm --filter web build`, and `pnpm --filter admin build` passed
-- Next: restore a reachable Ansor database and run the full live Phase 4 smoke tests.
+- 2026-06-24: Phase 6 migration/runtime verification completed:
+  - historical Parfumbox migrations were archived out of active `apps/api/prisma/migrations`
+  - active Prisma migration chain is now the single clean Ansor baseline `20260622193000_ansor_market_baseline`
+  - local `ansor_market` database was reset and `pnpm --filter api db:migrate` + `pnpm --filter api db:seed` passed
+  - live HTTP smoke passed for admin login, `/admin/stats/dashboard`, product/category/measurement-unit CRUD, order status update to `PREPARING`, notification read flows, broadcast send, and inventory adjustment
+  - live Socket.IO smoke passed for both `/admin` and `/user`
+  - runtime fixes added for optional dashboard date defaults and namespace-specific Socket.IO JWT secret verification
+  - `pnpm install`, `pnpm --filter api build`, `pnpm --filter web build`, `pnpm --filter admin build`, and `pnpm --filter api test` passed
+  - `pnpm --filter api test:e2e` remains blocked because its separate `ansor_market_test` database at `localhost:5433` is not reachable
+- 2026-06-25: Manual runtime bugfix checkpoint completed:
+  - admin notification bell now receives an immediate RTK Query cache update on `/admin` `notifications:new` while preserving toast and sound behavior
+  - admin broadcasts page now normalizes the backend paginated broadcast response before rendering, so it no longer treats `{ items, total, ... }` as an array
+  - Telegram order status bot messages are now always generated in Uzbek regardless of user locale
+  - `pnpm --filter api build`, `pnpm --filter web build`, `pnpm --filter admin build`, and `pnpm --filter api test` passed
+  - focused runtime smoke passed for admin notification realtime payload/unread state, broadcast list/create/send, order status update, and Uzbek status copy
+- Next: restore the dedicated e2e Postgres database on port 5433 or repoint the e2e environment deliberately, then run `pnpm --filter api test:e2e`.
 
 ## Phase 1 - Backend Schema and APIs
 
@@ -427,7 +442,19 @@ Changes:
 - Refactored admin `useAdminOrdersRealtime` still invalidates `Order`, `Stats`, and `Notification` tags from socket events.
 - `OrdersService.updateStatus` supports `PREPARING`, creates `ORDER_STATUS` user notifications, sends Telegram status messages, emits user order events, and invalidates admin realtime consumers through the existing order event service.
 - `BroadcastsService.sendNow` creates `BROADCAST` user notifications for active users and keeps the existing Telegram send attempt path.
-- Full live socket/event verification still requires a reachable database with migrated Ansor schema and seeded users/orders/admin.
+2026-06-24 live verification notes:
+
+- `/admin` and `/user` Socket.IO namespace authentication was live-smoked against the migrated local `ansor_market` database.
+- `/admin` received both `orders:changed` and `notifications:new` on order creation and status update.
+- `/user` received `order:update` and `product:stock` events.
+- The gateways now verify tokens with namespace-specific secrets from `ADMIN_JWT_SECRET` and `JWT_SECRET`, avoiding ambiguous `JwtService` provider resolution when both auth modules are imported.
+- `/admin/stats/dashboard` now supports omitted `from`/`to` query params by defaulting to the last 14 UTC days.
+
+2026-06-25 runtime bugfix notes:
+
+- Admin realtime notification handling now patches `getNotifications` cache immediately with the `notifications:new` payload and then invalidates the general `Notification` tag for consistency.
+- `getBroadcasts` in the admin RTK Query layer now accepts the backend paginated response and returns `items` to the existing Broadcasts page.
+- Backend Telegram status messages call `buildOrderStatusNotifyContent("uz", ...)` directly, so Russian user locale no longer changes bot order-status copy.
 
 ## Phase 5 - Cleanup
 

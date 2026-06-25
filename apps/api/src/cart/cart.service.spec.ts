@@ -26,8 +26,13 @@ describe("CartService", () => {
   });
 
   it("upsertItem updates cart line", async () => {
+    prisma.product.findFirst.mockResolvedValue({ id: "p1", stockQuantity: 10 } as never);
     prisma.cartItem.upsert.mockResolvedValue({} as never);
     await service.upsertItem("user-1", { productId: "p1", qty: 2 });
+    expect(prisma.product.findFirst).toHaveBeenCalledWith({
+      where: { id: "p1", isActive: true },
+      select: { id: true, stockQuantity: true },
+    });
     expect(prisma.cartItem.upsert).toHaveBeenCalled();
   });
 
