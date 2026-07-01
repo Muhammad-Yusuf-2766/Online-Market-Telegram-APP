@@ -78,9 +78,9 @@ export function MeasurementUnitsPage() {
         }).unwrap();
       }
       setModalOpen(false);
-      notifications.show({ color: 'green', message: 'Measurement unit saved' });
+      notifications.show({ color: 'green', message: 'O‘lchov birligi saqlandi.' });
     } catch {
-      notifications.show({ color: 'red', message: 'Could not save measurement unit' });
+      notifications.show({ color: 'red', message: 'O‘lchov birligini saqlab bo‘lmadi.' });
     }
   }
 
@@ -88,27 +88,27 @@ export function MeasurementUnitsPage() {
     <Stack gap="md">
       <Group justify="space-between" align="flex-end">
         <Stack gap={4}>
-          <Title order={2}>Measurement Units</Title>
+          <Title order={2}>O‘lchov birliklari</Title>
           <Text c="dimmed" size="sm">
-            Units used for product display and order item snapshots.
+            Mahsulot ko‘rinishi va buyurtma qatorlarida ishlatiladigan birliklar.
           </Text>
         </Stack>
         <Button color="parfum" onClick={openCreate}>
-          New Unit
+          Yangi birlik
         </Button>
       </Group>
 
       {isLoading ? (
-        <Text c="dimmed">Loading...</Text>
+        <Text c="dimmed">Yuklanmoqda...</Text>
       ) : (
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Name</Table.Th>
-              <Table.Th>Slug</Table.Th>
-              <Table.Th>Symbol</Table.Th>
-              <Table.Th>Sort</Table.Th>
-              <Table.Th>Decimal</Table.Th>
+              <Table.Th>Nomi</Table.Th>
+              <Table.Th>Kalit so‘z</Table.Th>
+              <Table.Th>Belgisi</Table.Th>
+              <Table.Th>Tartib</Table.Th>
+              <Table.Th>Kasr miqdor</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -121,7 +121,7 @@ export function MeasurementUnitsPage() {
                 <Table.Td>{row.sortOrder}</Table.Td>
                 <Table.Td>
                   <Badge color={row.allowDecimal ? 'blue' : 'gray'} variant="light">
-                    {row.allowDecimal ? 'Allowed' : 'Whole only'}
+                    {row.allowDecimal ? 'Ruxsat bor' : 'Faqat butun'}
                   </Badge>
                 </Table.Td>
                 <Table.Td>
@@ -134,8 +134,9 @@ export function MeasurementUnitsPage() {
                       color="red"
                       loading={deleting}
                       onClick={async () => {
-                        if (!window.confirm(`Delete ${row.name}?`)) return;
+                        if (!window.confirm(`«${row.name}» o‘lchov birligi o‘chirilsinmi?`)) return;
                         await deleteUnit(row.id).unwrap();
+                        notifications.show({ color: 'green', message: 'O‘lchov birligi o‘chirildi.' });
                       }}
                     >
                       <IconTrash size={16} />
@@ -147,24 +148,29 @@ export function MeasurementUnitsPage() {
           </Table.Tbody>
         </Table>
       )}
+      {!isLoading && data.length === 0 ? (
+        <Text size="sm" c="dimmed" ta="center" py="md">
+          O‘lchov birliklari topilmadi.
+        </Text>
+      ) : null}
 
-      <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit unit' : 'New unit'}>
+      <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Birlikni tahrirlash' : 'Yangi birlik'}>
         <Stack>
-          <TextInput label="Slug" value={slug} onChange={(e) => setSlug(e.currentTarget.value)} />
-          <TextInput label="Name" value={name} onChange={(e) => setName(e.currentTarget.value)} />
-          <TextInput label="Symbol" value={symbol} onChange={(e) => setSymbol(e.currentTarget.value)} />
-          <NumberInput label="Sort order" value={sortOrder} onChange={(value) => setSortOrder(Number(value) || 0)} />
+          <TextInput label="Kalit so‘z" value={slug} onChange={(e) => setSlug(e.currentTarget.value)} />
+          <TextInput label="Nomi" value={name} onChange={(e) => setName(e.currentTarget.value)} />
+          <TextInput label="Belgisi" value={symbol} onChange={(e) => setSymbol(e.currentTarget.value)} />
+          <NumberInput label="Tartib raqami" value={sortOrder} onChange={(value) => setSortOrder(Number(value) || 0)} />
           <Switch
-            label="Allow decimal quantities"
+            label="Kasr miqdorga ruxsat"
             checked={allowDecimal}
             onChange={(e) => setAllowDecimal(e.currentTarget.checked)}
           />
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setModalOpen(false)}>
-              Cancel
+              Bekor qilish
             </Button>
             <Button color="parfum" loading={creating || updating} onClick={submit}>
-              Save
+              Saqlash
             </Button>
           </Group>
         </Stack>

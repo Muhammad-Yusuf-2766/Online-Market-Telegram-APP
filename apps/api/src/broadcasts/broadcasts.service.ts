@@ -109,4 +109,9 @@ export class BroadcastsService {
     });
     return { sent, errors };
   }
+
+  async remove(id: string) {
+    await this.prisma.broadcast.delete({ where: { id } });
+    return { ok: true as const };
+  }
 }

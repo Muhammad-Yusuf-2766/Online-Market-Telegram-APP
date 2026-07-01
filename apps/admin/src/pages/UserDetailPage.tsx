@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { Link, useParams } from 'react-router-dom';
 import { useGetUserDetails360Query } from '../app/parfumApi';
 import { formatPrice } from '../shared/lib/money';
+import { ORDER_STATUS_LABEL } from '../shared/lib/orderStatusMantine';
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -22,16 +23,16 @@ export function UserDetailPage() {
   const { data, isLoading, isError } = useGetUserDetails360Query(userId, { skip: !userId });
 
   if (isLoading) {
-    return <Text c="dimmed">Loading...</Text>;
+    return <Text c="dimmed">Yuklanmoqda...</Text>;
   }
 
   if (isError || !data) {
     return (
       <Stack>
         <Button component={Link} to="/users" variant="subtle" color="parfum">
-          Back to users
+          Foydalanuvchilarga qaytish
         </Button>
-        <Text c="red">User detail endpoint is not available from the current backend module.</Text>
+        <Text c="red">Foydalanuvchi tafsilotlarini yuklab bo‘lmadi.</Text>
       </Stack>
     );
   }
@@ -43,7 +44,7 @@ export function UserDetailPage() {
       <Group justify="space-between">
         <Stack gap={4}>
           <Button component={Link} to="/users" variant="subtle" color="parfum" w="fit-content">
-            Back to users
+            Foydalanuvchilarga qaytish
           </Button>
           <Title order={2}>{[user.firstName, user.lastName].filter(Boolean).join(' ') || user.telegramId}</Title>
           <Text c="dimmed" size="sm">
@@ -56,23 +57,23 @@ export function UserDetailPage() {
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 5 }}>
-        <Stat label="Orders" value={kpis.orderCount} />
-        <Stat label="Spent" value={formatPrice(kpis.totalSpentKrw)} />
-        <Stat label="Wishlist" value={kpis.wishlistCount} />
-        <Stat label="Cart items" value={kpis.cartItemCount} />
-        <Stat label="Addresses" value={kpis.addressCount} />
+        <Stat label="Buyurtmalar" value={kpis.orderCount} />
+        <Stat label="Sarflangan" value={formatPrice(kpis.totalSpentKrw)} />
+        <Stat label="Istaklar" value={kpis.wishlistCount} />
+        <Stat label="Savatdagi mahsulotlar" value={kpis.cartItemCount} />
+        <Stat label="Manzillar" value={kpis.addressCount} />
       </SimpleGrid>
 
       <Paper withBorder radius="md" p="md">
-        <Title order={4}>Saved Addresses</Title>
+        <Title order={4}>Saqlangan manzillar</Title>
         <Table striped mt="sm">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Label</Table.Th>
-              <Table.Th>Recipient</Table.Th>
-              <Table.Th>Phone</Table.Th>
-              <Table.Th>Address</Table.Th>
-              <Table.Th>Default</Table.Th>
+              <Table.Th>Nomi</Table.Th>
+              <Table.Th>Qabul qiluvchi</Table.Th>
+              <Table.Th>Telefon</Table.Th>
+              <Table.Th>Manzil</Table.Th>
+              <Table.Th>Asosiy</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -89,7 +90,7 @@ export function UserDetailPage() {
                       .join(' · ')}
                   </Text>
                 </Table.Td>
-                <Table.Td>{address.isDefault ? 'Yes' : 'No'}</Table.Td>
+                <Table.Td>{address.isDefault ? 'Ha' : 'Yo‘q'}</Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
@@ -97,21 +98,21 @@ export function UserDetailPage() {
       </Paper>
 
       <Paper withBorder radius="md" p="md">
-        <Title order={4}>Orders</Title>
+        <Title order={4}>Buyurtmalar</Title>
         <Table striped mt="sm">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Order</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Created</Table.Th>
-              <Table.Th ta="right">Total</Table.Th>
+              <Table.Th>Buyurtma</Table.Th>
+              <Table.Th>Holati</Table.Th>
+              <Table.Th>Yaratilgan</Table.Th>
+              <Table.Th ta="right">Jami</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {orders.map((order) => (
               <Table.Tr key={order.id}>
                 <Table.Td>{order.id.slice(0, 8)}</Table.Td>
-                <Table.Td>{order.status}</Table.Td>
+                <Table.Td>{ORDER_STATUS_LABEL[order.status]}</Table.Td>
                 <Table.Td>{dayjs(order.createdAt).format('DD.MM.YYYY HH:mm')}</Table.Td>
                 <Table.Td ta="right">{formatPrice(order.totalKrw)}</Table.Td>
               </Table.Tr>
@@ -122,7 +123,7 @@ export function UserDetailPage() {
 
       <SimpleGrid cols={{ base: 1, md: 2 }}>
         <Paper withBorder radius="md" p="md">
-          <Title order={4}>Wishlist</Title>
+          <Title order={4}>Istaklar</Title>
           <Table striped mt="sm">
             <Table.Tbody>
               {wishlistItems.map((item) => (
@@ -135,7 +136,7 @@ export function UserDetailPage() {
           </Table>
         </Paper>
         <Paper withBorder radius="md" p="md">
-          <Title order={4}>Cart</Title>
+          <Title order={4}>Savat</Title>
           <Table striped mt="sm">
             <Table.Tbody>
               {cartItems.map((item) => (

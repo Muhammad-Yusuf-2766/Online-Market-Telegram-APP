@@ -1,6 +1,158 @@
 # Ansor Market Project State
 
-Last updated: 2026-06-25
+Last updated: 2026-07-01
+
+## 2026-07-01 Admin Branding, Local Image Uploads, and Banner Preview Checkpoint
+
+### Completed
+
+- Continued from the latest Ansor Market admin polishing checkpoint without restarting the refactor.
+- Added database-backed market branding:
+  - new singleton `MarketBranding` Prisma model and migration
+  - public `GET /settings/branding`
+  - admin `GET /admin/settings/branding`
+  - admin `PATCH /admin/settings/branding`
+  - safe defaults remain `Ansor Market`, `Koreadagi halal mahsulotlar`, and no required logo URL
+- Added admin branding UI:
+  - new Settings → Market brendi page
+  - Uzbek labels/messages
+  - supports editing name, slogan, logo URL, and uploading a logo file
+  - admin header now renders saved logo/name/slogan with logo beside stacked name/slogan
+- Added backend local image upload support:
+  - `POST /admin/uploads/product-images`
+  - `POST /admin/uploads/banner-images`
+  - `POST /admin/uploads/branding-logo`
+  - files are saved under `apps/api/uploads/product-images`, `apps/api/uploads/banner-images`, and `apps/api/uploads/branding`
+  - Nest serves `apps/api/uploads` at `/uploads`
+  - responses return browser-usable URLs based on `API_PUBLIC_URL`
+  - existing MinIO/S3 presign endpoint remains unchanged at `/admin/storage/presign`
+- Updated admin product image UX:
+  - product create/edit still supports URL entry
+  - product create/edit now supports local file upload
+  - uploaded URL is appended to the existing image list
+  - max 2 product image behavior is preserved
+- Updated admin banner UX:
+  - banner create supports URL entry and file upload
+  - banner edit modal supports URL entry and file upload
+  - uploaded banner URLs are stored separately from product uploads
+- Updated Telegram Mini App:
+  - top bar reads branding from backend with safe fallback defaults
+  - sale/bestseller section titles are now `Chegirmada` and `Eng ko‘p sotilgan`
+  - right-side section “view all” links were removed
+  - banner taps open an image preview modal with an `X` close button instead of navigating away
+- Added `API_PUBLIC_URL` to the backend env example for local upload URLs.
+
+### Files Changed This Session
+
+Backend:
+
+- `apps/api/.env.example`
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260701090000_market_branding_and_local_uploads/migration.sql`
+- `apps/api/src/admin-settings/admin-settings.module.ts`
+- `apps/api/src/admin-settings/dto/update-market-branding.dto.ts`
+- `apps/api/src/admin-settings/market-branding.controller.ts`
+- `apps/api/src/admin-settings/market-branding.service.ts`
+- `apps/api/src/main.ts`
+- `apps/api/src/storage/storage.controller.ts`
+- `apps/api/src/storage/storage.service.ts`
+
+Admin:
+
+- `apps/admin/src/app/App.tsx`
+- `apps/admin/src/app/parfumApi.ts`
+- `apps/admin/src/features/navigation/adminNavSections.ts`
+- `apps/admin/src/i18n/locales/uz.json`
+- `apps/admin/src/layouts/AdminLayout.tsx`
+- `apps/admin/src/pages/BannersPage.tsx`
+- `apps/admin/src/pages/ProductsPage.tsx`
+- `apps/admin/src/pages/settings/SettingsBrandingPage.tsx`
+- `apps/admin/src/pages/settings/SettingsIndexRedirect.tsx`
+
+Telegram Mini App:
+
+- `apps/web/src/app/parfumApi.ts`
+- `apps/web/src/i18n/locales/uz.json`
+- `apps/web/src/pages/catalog-page/ui/CatalogPage.tsx`
+- `apps/web/src/widgets/app-top-bar/ui/AppTopBar.tsx`
+- `apps/web/src/widgets/app-top-bar/ui/app-top-bar.css`
+- `apps/web/src/widgets/banner-carousel/ui/BannerCarousel.tsx`
+- `apps/web/src/widgets/banner-carousel/ui/banner-carousel.css`
+
+Docs:
+
+- `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`
+- `docs/ANSOR_MARKET_PROJECT_STATE.md`
+- `docs/ANSOR_MARKET_TODO.md`
+
+### Build/Test Status
+
+Run and passed after a clean install with the repo-pinned pnpm:
+
+```bash
+corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false
+corepack pnpm --filter api exec prisma format
+corepack pnpm --filter api exec prisma validate
+corepack pnpm --filter api build
+corepack pnpm --filter web build
+corepack pnpm --filter admin build
+corepack pnpm --filter api test
+```
+
+Results:
+
+- Prisma schema formatted and validated.
+- API build passed.
+- Web build passed.
+- Admin build passed.
+- API unit tests passed: 10 suites, 42 tests.
+
+Notes:
+
+- Running global `pnpm` first used pnpm 11.7.0 and failed on dependency build-script approval. The repo pins `pnpm@9.15.9`, so verification was rerun successfully through `corepack pnpm`.
+- Admin build still shows the existing large chunk and plugin timing warnings.
+- Prisma still warns that `package.json#prisma` config is deprecated for Prisma 7.
+
+### Manual Verification Notes
+
+Not manually browser-tested in this session:
+
+1. Admin update/save of branding values and logo upload.
+2. Admin header visual layout with saved branding.
+3. Telegram header visual layout with saved branding.
+4. Product and banner local upload display in running admin/web browsers.
+5. Banner modal tap/close behavior on a real Telegram Mini App viewport.
+
+### Known Issues
+
+- The new Prisma migration must be applied to any existing local/dev database before the branding endpoints can read/write the `MarketBranding` table.
+- `API_PUBLIC_URL` should be set to the public API origin in non-local environments so uploaded image URLs are reachable by admin and Telegram browsers.
+- API e2e tests remain separately blocked unless the dedicated `localhost:5433` test database is available, as documented in earlier checkpoints.
+- Existing internal compatibility names remain, including `parfumApi` and the Mantine `parfum` color token.
+
+### Next Exact Steps
+
+1. Apply the new migration to the active dev database:
+   - `corepack pnpm --filter api db:migrate`
+2. Restart the API/admin/web stack.
+3. In admin, open Settings → Market brendi and verify:
+   - market name update
+   - market slogan update
+   - logo URL entry
+   - logo file upload
+   - header renders logo and stacked text cleanly
+4. In admin product create/edit, verify URL images and local product image upload with max 2 images.
+5. In admin banners, verify URL entry, local banner upload, edit modal, active toggle, and delete.
+6. In Telegram Mini App, verify:
+   - header uses saved branding
+   - section titles are `Chegirmada` and `Eng ko‘p sotilgan`
+   - sale/bestseller “Barchasi” links are gone
+   - tapping a banner opens the image modal and `X` closes it
+7. If available, run `corepack pnpm --filter api test:e2e`.
+
+### Next Exact Prompt
+
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-07-01 Admin Branding, Local Image Uploads, and Banner Preview checkpoint. Do not restart from scratch. First apply the new Prisma migration to the active dev database, restart the local API/admin/web stack, and manually verify the admin branding settings, admin header branding layout, Telegram header branding, product image URL/upload flow with max 2 images, banner URL/upload/edit flow, Telegram sale/bestseller section titles without “Barchasi” links, and banner image preview modal. If the dedicated e2e database is available, run `corepack pnpm --filter api test:e2e`; otherwise document the blocker. Update the Ansor docs with files changed, build/test/manual QA status, known issues, and the next exact prompt.
 
 ## 2026-06-25 Admin Notifications, Broadcasts, and Uzbek Bot Messages Bugfix Checkpoint
 

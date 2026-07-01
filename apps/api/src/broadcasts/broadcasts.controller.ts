@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAdminGuard } from "../admin-auth/guards/jwt-admin.guard";
 import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
@@ -35,5 +35,11 @@ export class BroadcastsController {
   @Post(":id/send")
   sendNow(@Param("id") id: string) {
     return this.broadcasts.sendNow(id);
+  }
+
+  @Delete(":id")
+  @ApiOperation({ summary: "Delete broadcast" })
+  remove(@Param("id") id: string) {
+    return this.broadcasts.remove(id);
   }
 }

@@ -72,6 +72,12 @@ export function getAdminNavSections(t: TFunction): AdminNavSection[] {
       title: t('navSections.settings'),
       items: [
         {
+          to: '/settings/branding',
+          label: t('nav.settingsBranding'),
+          icon: IconSettings,
+          always: true,
+        },
+        {
           to: '/settings/admin-users',
           label: t('nav.settingsAdminUsers'),
           icon: IconSettings,

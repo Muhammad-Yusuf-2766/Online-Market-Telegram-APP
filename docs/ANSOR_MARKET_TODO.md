@@ -1,6 +1,6 @@
 # Ansor Market TODO
 
-Last updated: 2026-06-25
+Last updated: 2026-07-01
 
 ## Immediate Rule
 
@@ -221,6 +221,42 @@ pnpm --filter admin build
 - [x] Smoke verify generated Telegram order status copy is Uzbek.
 - [ ] Manually confirm admin bell visual badge increments in the browser without reload after restarting/running the local stack.
 
+## 2026-07-01 Branding and Local Upload Improvements
+
+- [x] Add database-backed market branding settings.
+- [x] Add public branding endpoint for Telegram Mini App.
+- [x] Add admin branding get/update endpoints.
+- [x] Add Settings → Market brendi admin page with Uzbek labels.
+- [x] Admin can edit market name and slogan.
+- [x] Admin can set logo URL.
+- [x] Admin can upload logo file.
+- [x] Admin header uses saved logo/name/slogan with logo beside stacked text.
+- [x] Telegram Mini App header uses saved logo/name/slogan with fallback defaults.
+- [x] Serve backend local uploads from `/uploads`.
+- [x] Add product image local upload endpoint under `uploads/product-images`.
+- [x] Add banner image local upload endpoint under `uploads/banner-images`.
+- [x] Product create/edit supports URL entry and local image upload.
+- [x] Product max 2 image behavior remains enforced.
+- [x] Banner create supports URL entry and local image upload.
+- [x] Banner edit modal supports URL entry and local image upload.
+- [x] Change Telegram sale title to `Chegirmada`.
+- [x] Change Telegram bestseller title to `Eng ko‘p sotilgan`.
+- [x] Remove sale/bestseller “Barchasi” links.
+- [x] Add Telegram banner image preview modal with `X` close button.
+- [x] Add `API_PUBLIC_URL` env example for local upload URL generation.
+- [x] Run `corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false`.
+- [x] Run `corepack pnpm --filter api build`.
+- [x] Run `corepack pnpm --filter web build`.
+- [x] Run `corepack pnpm --filter admin build`.
+- [x] Run `corepack pnpm --filter api test`.
+- [ ] Apply the new Prisma migration to the active dev database.
+- [ ] Manually verify admin branding settings and header layout in browser.
+- [ ] Manually verify Telegram Mini App dynamic header branding.
+- [ ] Manually verify product image URL/upload display in admin.
+- [ ] Manually verify banner image URL/upload/edit display in admin.
+- [ ] Manually verify Telegram banner preview modal on mobile viewport.
+- [ ] Run `corepack pnpm --filter api test:e2e` if the dedicated test database is available.
+
 ## Documentation Maintenance
 
 At the end of each major task:
@@ -238,4 +274,4 @@ At the end of each major task:
 
 ## Next Exact Prompt To Run
 
-Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-06-25 Admin Notifications, Broadcasts, and Uzbek Bot Messages Bugfix checkpoint. Do not restart from scratch. First manually re-check the admin browser with the local API/admin/web/Telegram Mini App stack: create an order from Telegram, confirm the admin toast, notification sound, and bell unread badge update immediately; open Broadcasts/Xabar tarqatish and list/create/send a broadcast; change an order status and confirm the Telegram bot message is Uzbek. Then make the dedicated API e2e database available at `localhost:5433` for `ansor_market_test` or intentionally update the isolated e2e DB configuration, run `pnpm --filter api test:e2e`, and fix any real e2e failures. Update the Ansor docs with files changed, build/test status, known issues, and the next exact prompt.
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-07-01 Admin Branding, Local Image Uploads, and Banner Preview checkpoint. Do not restart from scratch. First apply the new Prisma migration to the active dev database, restart the local API/admin/web stack, and manually verify the admin branding settings, admin header branding layout, Telegram header branding, product image URL/upload flow with max 2 images, banner URL/upload/edit flow, Telegram sale/bestseller section titles without “Barchasi” links, and banner image preview modal. If the dedicated e2e database is available, run `corepack pnpm --filter api test:e2e`; otherwise document the blocker. Update the Ansor docs with files changed, build/test/manual QA status, known issues, and the next exact prompt.

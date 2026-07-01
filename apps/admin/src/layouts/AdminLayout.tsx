@@ -18,12 +18,17 @@ import {
 } from '../features/navigation/adminNavSections';
 import { NotificationsBell } from '../features/notifications/NotificationsBell';
 import { useAdminOrdersRealtime } from '../features/orders/useAdminOrdersRealtime';
+import { useGetMarketBrandingQuery } from '../app/parfumApi';
 export function AdminLayout() {
   useAdminOrdersRealtime();
   const { t } = useTranslation();
   const { profile } = useCurrentAdmin();
+  const { data: branding } = useGetMarketBrandingQuery();
   const [opened, { toggle }] = useDisclosure();
   const isMobile = useMediaQuery('(max-width: 47.99em)');
+  const marketName = branding?.marketName || 'Ansor Market';
+  const marketSlogan = branding?.marketSlogan || 'Koreadagi halal mahsulotlar';
+  const marketLogoUrl = branding?.marketLogoUrl || null;
 
   const navSections = useMemo(
     () => filterNavSections(getAdminNavSections(t)),
@@ -44,9 +49,46 @@ export function AdminLayout() {
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <Group wrap="nowrap" style={{ minWidth: 0 }}>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Title order={4} c="parfum.8" visibleFrom="sm">
-              {t('layout.brand')}
-            </Title>
+            <Group gap="sm" wrap="nowrap" visibleFrom="sm" style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  background: 'var(--mantine-color-parfum-1)',
+                  color: 'var(--mantine-color-parfum-8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  fontWeight: 800,
+                }}
+              >
+                {marketLogoUrl ? (
+                  <img
+                    src={marketLogoUrl}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  marketName.trim().charAt(0).toUpperCase() || 'A'
+                )}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <Title
+                  order={4}
+                  c="parfum.8"
+                  lh={1.1}
+                  style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                >
+                  {marketName}
+                </Title>
+                <Text size="xs" c="dimmed" lh={1.1} truncate>
+                  {marketSlogan}
+                </Text>
+              </div>
+            </Group>
           </Group>
           <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
             <NotificationsBell />

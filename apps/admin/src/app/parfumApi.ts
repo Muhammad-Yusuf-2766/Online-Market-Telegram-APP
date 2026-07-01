@@ -126,6 +126,12 @@ export type BannerRow = {
   updatedAt?: string;
 };
 
+export type MarketBranding = {
+  marketName: string;
+  marketSlogan: string;
+  marketLogoUrl: string | null;
+};
+
 export type ProductFeedbackStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type AdminProductFeedbackRow = {
@@ -363,6 +369,7 @@ export const parfumApi = createApi({
   tagTypes: [
     'AdminPanelUser',
     'Banner',
+    'Branding',
     'Broadcast',
     'Category',
     'Finance',
@@ -423,6 +430,36 @@ export const parfumApi = createApi({
     }),
     presignUpload: build.mutation<{ uploadUrl: string; publicUrl: string }, { filename: string; contentType: string }>({
       query: (body) => ({ url: '/admin/storage/presign', method: 'POST', body }),
+    }),
+    uploadProductImage: build.mutation<{ url: string }, File>({
+      query: (file) => {
+        const body = new FormData();
+        body.append('file', file);
+        return { url: '/admin/uploads/product-images', method: 'POST', body };
+      },
+    }),
+    uploadBannerImage: build.mutation<{ url: string }, File>({
+      query: (file) => {
+        const body = new FormData();
+        body.append('file', file);
+        return { url: '/admin/uploads/banner-images', method: 'POST', body };
+      },
+    }),
+    uploadBrandingLogo: build.mutation<{ url: string }, File>({
+      query: (file) => {
+        const body = new FormData();
+        body.append('file', file);
+        return { url: '/admin/uploads/branding-logo', method: 'POST', body };
+      },
+    }),
+
+    getMarketBranding: build.query<MarketBranding, void>({
+      query: () => '/admin/settings/branding',
+      providesTags: ['Branding'],
+    }),
+    updateMarketBranding: build.mutation<MarketBranding, Partial<MarketBranding>>({
+      query: (body) => ({ url: '/admin/settings/branding', method: 'PATCH', body }),
+      invalidatesTags: ['Branding'],
     }),
 
     getCategories: build.query<CategoryRow[], void>({
@@ -576,6 +613,10 @@ export const parfumApi = createApi({
       query: (id) => ({ url: `/admin/broadcasts/${id}/send`, method: 'POST' }),
       invalidatesTags: ['Broadcast'],
     }),
+    deleteBroadcast: build.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/admin/broadcasts/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Broadcast'],
+    }),
 
     listAdminPanelUsers: build.query<Paginated<AdminPanelUserRow>, { page?: number; pageSize?: number; q?: string } | void>({
       query: (filters) => ({ url: '/admin/settings/admin-users', params: filters ?? undefined }),
@@ -612,6 +653,7 @@ export const {
   useCreateProductMutation,
   useDeleteAdminPanelUserMutation,
   useDeleteBannerMutation,
+  useDeleteBroadcastMutation,
   useDeleteCategoryMutation,
   useDeleteMeasurementUnitMutation,
   useDeleteProductMutation,
@@ -626,6 +668,7 @@ export const {
   useGetInventoryLowStockQuery,
   useGetInventoryMovementsQuery,
   useGetInventorySummaryQuery,
+  useGetMarketBrandingQuery,
   useGetMeQuery,
   useGetMeasurementUnitsQuery,
   useGetNotificationsQuery,
@@ -644,7 +687,11 @@ export const {
   useUpdateAdminPanelUserMutation,
   useUpdateBannerMutation,
   useUpdateCategoryMutation,
+  useUpdateMarketBrandingMutation,
   useUpdateMeasurementUnitMutation,
   useUpdateOrderStatusMutation,
   useUpdateProductMutation,
+  useUploadBannerImageMutation,
+  useUploadBrandingLogoMutation,
+  useUploadProductImageMutation,
 } = parfumApi;

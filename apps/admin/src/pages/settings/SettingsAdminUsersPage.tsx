@@ -78,9 +78,9 @@ export function SettingsAdminUsersPage() {
         }).unwrap();
       }
       closeModal();
-      notifications.show({ color: 'green', message: 'Admin user saved' });
+      notifications.show({ color: 'green', message: 'Administrator saqlandi.' });
     } catch {
-      notifications.show({ color: 'red', message: 'Could not save admin user' });
+      notifications.show({ color: 'red', message: 'Administratorni saqlab bo‘lmadi.' });
     }
   }
 
@@ -90,26 +90,26 @@ export function SettingsAdminUsersPage() {
     <Stack gap="md">
       <Group justify="space-between" align="flex-end">
         <Stack gap={4}>
-          <Title order={2}>Admin Users</Title>
+          <Title order={2}>Administratorlar</Title>
           <Text c="dimmed" size="sm">
-            Manage Super Admin accounts for the Ansor Market admin panel.
+            Ansor Market admin paneli uchun Super Admin hisoblarini boshqarish.
           </Text>
         </Stack>
         <Button color="parfum" onClick={openCreate}>
-          New Admin
+          Yangi administrator
         </Button>
       </Group>
 
       {isLoading ? (
-        <Text c="dimmed">Loading...</Text>
+        <Text c="dimmed">Yuklanmoqda...</Text>
       ) : (
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Email</Table.Th>
-              <Table.Th>Name</Table.Th>
-              <Table.Th>Type</Table.Th>
-              <Table.Th>Status</Table.Th>
+              <Table.Th>Elektron pochta</Table.Th>
+              <Table.Th>Ism</Table.Th>
+              <Table.Th>Turi</Table.Th>
+              <Table.Th>Holati</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -120,12 +120,12 @@ export function SettingsAdminUsersPage() {
                 <Table.Td>{row.fullName ?? '-'}</Table.Td>
                 <Table.Td>
                   <Badge color="parfum" variant="light">
-                    {row.isSuperAdmin ? 'Super Admin' : 'Admin'}
+                    {row.isSuperAdmin ? 'Super Admin' : 'Administrator'}
                   </Badge>
                 </Table.Td>
                 <Table.Td>
                   <Badge color={row.isActive ? 'green' : 'gray'} variant="light">
-                    {row.isActive ? 'Active' : 'Inactive'}
+                    {row.isActive ? 'Faol' : 'Nofaol'}
                   </Badge>
                 </Table.Td>
                 <Table.Td>
@@ -138,8 +138,9 @@ export function SettingsAdminUsersPage() {
                       color="red"
                       loading={deleting}
                       onClick={async () => {
-                        if (!window.confirm(`Delete ${row.email}?`)) return;
+                        if (!window.confirm(`«${row.email}» administrator hisobi o‘chirilsinmi?`)) return;
                         await deleteUser(row.id).unwrap();
+                        notifications.show({ color: 'green', message: 'Administrator o‘chirildi.' });
                       }}
                     >
                       <IconTrash size={16} />
@@ -151,27 +152,32 @@ export function SettingsAdminUsersPage() {
           </Table.Tbody>
         </Table>
       )}
+      {!isLoading && (data?.items?.length ?? 0) === 0 ? (
+        <Text size="sm" c="dimmed" ta="center" py="md">
+          Administratorlar topilmadi.
+        </Text>
+      ) : null}
 
-      <Modal opened={modalOpen} onClose={closeModal} title={editing ? 'Edit admin user' : 'New admin user'}>
+      <Modal opened={modalOpen} onClose={closeModal} title={editing ? 'Administratorni tahrirlash' : 'Yangi administrator'}>
         <Stack>
-          <TextInput label="Email" value={email} onChange={(e) => setEmail(e.currentTarget.value)} />
+          <TextInput label="Elektron pochta" value={email} onChange={(e) => setEmail(e.currentTarget.value)} />
           <PasswordInput
-            label="Password"
+            label="Parol"
             value={password}
-            placeholder={editing ? 'Leave blank to keep current password' : undefined}
+            placeholder={editing ? 'Joriy parolni saqlash uchun bo‘sh qoldiring' : undefined}
             onChange={(e) => setPassword(e.currentTarget.value)}
           />
-          <TextInput label="Full name" value={fullName} onChange={(e) => setFullName(e.currentTarget.value)} />
-          <Switch label="Active" checked={isActive} onChange={(e) => setIsActive(e.currentTarget.checked)} />
+          <TextInput label="To‘liq ism" value={fullName} onChange={(e) => setFullName(e.currentTarget.value)} />
+          <Switch label="Faol" checked={isActive} onChange={(e) => setIsActive(e.currentTarget.checked)} />
           <Text size="xs" c="dimmed">
-            New admin users are created as Super Admins by the backend.
+            Yangi administratorlar backend tomonidan Super Admin sifatida yaratiladi.
           </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={closeModal}>
-              Cancel
+              Bekor qilish
             </Button>
             <Button color="parfum" loading={creating || updating} onClick={submit}>
-              Save
+              Saqlash
             </Button>
           </Group>
         </Stack>

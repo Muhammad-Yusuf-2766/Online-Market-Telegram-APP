@@ -20,6 +20,11 @@ import {
 } from '../app/parfumApi';
 
 const PAGE_SIZE = 15;
+const FEEDBACK_STATUS_LABEL: Record<ProductFeedbackStatus, string> = {
+  PENDING: 'Tekshiruvda',
+  APPROVED: 'Chop etilgan',
+  REJECTED: 'Rad etilgan',
+};
 
 export function ProductFeedbackPage() {
   const { t } = useTranslation();
@@ -150,7 +155,7 @@ export function ProductFeedbackPage() {
                         </Group>
                       ) : (
                         <Text size="xs" c="dimmed">
-                          {row.status}
+                          {FEEDBACK_STATUS_LABEL[row.status]}
                         </Text>
                       )}
                     </Table.Td>

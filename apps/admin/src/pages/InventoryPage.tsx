@@ -54,42 +54,42 @@ export function InventoryPage() {
       }).unwrap();
       notifications.show({
         color: 'green',
-        message: `${product.title} stock is now ${result.stockQuantity}`,
+        message: `${product.title} qoldig‘i ${result.stockQuantity} bo‘ldi.`,
       });
       setProduct(null);
       setDelta(0);
       setReason('');
     } catch {
-      notifications.show({ color: 'red', message: 'Could not adjust inventory' });
+      notifications.show({ color: 'red', message: 'Ombor qoldig‘ini yangilab bo‘lmadi.' });
     }
   }
 
   return (
     <Stack gap="md">
       <Stack gap={4}>
-        <Title order={2}>Inventory</Title>
+        <Title order={2}>Ombor qoldig‘i</Title>
         <Text c="dimmed" size="sm">
-          Track stock quantity, low-stock products, and inventory movements.
+          Qoldiq, kam qolgan mahsulotlar va ombor harakatlarini kuzatish.
         </Text>
       </Stack>
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-        <Summary label="Products" value={summary?.productCount ?? '-'} />
-        <Summary label="Total stock" value={summary?.totalStockQuantity ?? '-'} />
-        <Summary label="Low stock" value={summary?.lowStockCount ?? '-'} />
-        <Summary label="Out of stock" value={summary?.outOfStockCount ?? '-'} />
+        <Summary label="Mahsulotlar" value={summary?.productCount ?? '-'} />
+        <Summary label="Jami qoldiq" value={summary?.totalStockQuantity ?? '-'} />
+        <Summary label="Kam qoldiq" value={summary?.lowStockCount ?? '-'} />
+        <Summary label="Tugagan" value={summary?.outOfStockCount ?? '-'} />
       </SimpleGrid>
 
       <Paper withBorder radius="md" p="md">
-        <Title order={4}>Low Stock</Title>
+        <Title order={4}>Kam qolgan mahsulotlar</Title>
         <Table striped highlightOnHover mt="sm">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Product</Table.Th>
-              <Table.Th>Category</Table.Th>
-              <Table.Th>Unit</Table.Th>
-              <Table.Th>Stock</Table.Th>
-              <Table.Th>Threshold</Table.Th>
+              <Table.Th>Mahsulot</Table.Th>
+              <Table.Th>Bo‘lim</Table.Th>
+              <Table.Th>Birlik</Table.Th>
+              <Table.Th>Qoldiq</Table.Th>
+              <Table.Th>Chegara</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -103,25 +103,30 @@ export function InventoryPage() {
                 <Table.Td>{row.lowStockThreshold}</Table.Td>
                 <Table.Td ta="right">
                   <Button size="xs" variant="light" color="parfum" onClick={() => setProduct(row)}>
-                    Adjust
+                    Tuzatish
                   </Button>
                 </Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
         </Table>
+        {lowStock.length === 0 ? (
+          <Text size="sm" c="dimmed" ta="center" py="md">
+            Kam qolgan mahsulotlar topilmadi.
+          </Text>
+        ) : null}
       </Paper>
 
       <Paper withBorder radius="md" p="md">
-        <Title order={4}>Movements</Title>
+        <Title order={4}>Ombor harakatlari</Title>
         <Table striped mt="sm">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Date</Table.Th>
-              <Table.Th>Product</Table.Th>
-              <Table.Th>Delta</Table.Th>
-              <Table.Th>Reason</Table.Th>
-              <Table.Th>Order</Table.Th>
+              <Table.Th>Sana</Table.Th>
+              <Table.Th>Mahsulot</Table.Th>
+              <Table.Th>O‘zgarish</Table.Th>
+              <Table.Th>Sabab</Table.Th>
+              <Table.Th>Buyurtma</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -136,24 +141,29 @@ export function InventoryPage() {
             ))}
           </Table.Tbody>
         </Table>
+        {(movements?.items?.length ?? 0) === 0 ? (
+          <Text size="sm" c="dimmed" ta="center" py="md">
+            Ombor harakatlari topilmadi.
+          </Text>
+        ) : null}
       </Paper>
 
-      <Modal opened={product !== null} onClose={() => setProduct(null)} title="Adjust inventory">
+      <Modal opened={product !== null} onClose={() => setProduct(null)} title="Ombor qoldig‘ini tuzatish">
         <Stack>
           <Text fw={600}>{product?.title}</Text>
           <NumberInput
-            label="Delta"
-            description="Use a positive number to add stock or a negative number to remove stock."
+            label="O‘zgarish"
+            description="Qoldiq qo‘shish uchun musbat, kamaytirish uchun manfiy son kiriting."
             value={delta}
             onChange={(value) => setDelta(Number(value) || 0)}
           />
-          <TextInput label="Reason" value={reason} onChange={(e) => setReason(e.currentTarget.value)} />
+          <TextInput label="Sabab" value={reason} onChange={(e) => setReason(e.currentTarget.value)} />
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setProduct(null)}>
-              Cancel
+              Bekor qilish
             </Button>
             <Button color="parfum" loading={adjusting} onClick={submitAdjustment}>
-              Save
+              Saqlash
             </Button>
           </Group>
         </Stack>

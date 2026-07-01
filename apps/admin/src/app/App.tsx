@@ -16,6 +16,7 @@ import { InventoryPage } from '../pages/InventoryPage';
 import { UserDetailPage } from '../pages/UserDetailPage';
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { SettingsAdminUsersPage } from '../pages/settings/SettingsAdminUsersPage';
+import { SettingsBrandingPage } from '../pages/settings/SettingsBrandingPage';
 import { SettingsIndexRedirect } from '../pages/settings/SettingsIndexRedirect';
 import { WelcomePage } from '../pages/WelcomePage';
 
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="broadcasts" element={<BroadcastsPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="settings" element={<SettingsIndexRedirect />} />
+          <Route path="settings/branding" element={<SettingsBrandingPage />} />
           <Route path="settings/admin-users" element={<SettingsAdminUsersPage />} />
         </Route>
       </Route>

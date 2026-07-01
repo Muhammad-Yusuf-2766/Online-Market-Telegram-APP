@@ -13,25 +13,35 @@ import {
   Title,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconSend } from '@tabler/icons-react';
+import { IconSend, IconTrash } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import {
   useCreateBroadcastMutation,
+  useDeleteBroadcastMutation,
   useGetBroadcastsQuery,
   useSendBroadcastNowMutation,
   type BroadcastRow,
 } from '../app/parfumApi';
 
+const BROADCAST_STATUS_LABEL: Record<BroadcastRow['status'], string> = {
+  DRAFT: 'Qoralama',
+  SENDING: 'Yuborilmoqda',
+  SENT: 'Yuborildi',
+  FAILED: 'Xatolik bor',
+};
+
 export function BroadcastsPage() {
   const { data = [], isLoading } = useGetBroadcastsQuery();
   const [createBroadcast, { isLoading: creating }] = useCreateBroadcastMutation();
   const [sendBroadcast, { isLoading: sending }] = useSendBroadcastNowMutation();
+  const [deleteBroadcast, { isLoading: deleting }] = useDeleteBroadcastMutation();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [confirming, setConfirming] = useState<BroadcastRow | null>(null);
+  const [removing, setRemoving] = useState<BroadcastRow | null>(null);
 
   async function submit() {
     if (!title.trim() || !body.trim()) return;
@@ -46,32 +56,32 @@ export function BroadcastsPage() {
       setBody('');
       setImageUrl('');
       setTargetUrl('');
-      notifications.show({ color: 'green', message: 'Broadcast draft created' });
+      notifications.show({ color: 'green', message: 'Xabar qoralamasi yaratildi.' });
     } catch {
-      notifications.show({ color: 'red', message: 'Could not create broadcast' });
+      notifications.show({ color: 'red', message: 'Xabar qoralamasini yaratib bo‘lmadi.' });
     }
   }
 
   return (
     <Stack gap="md">
       <Stack gap={4}>
-        <Title order={2}>Broadcasts</Title>
+        <Title order={2}>Xabar tarqatish</Title>
         <Text c="dimmed" size="sm">
-          Create and send Telegram messages to Ansor Market customers.
+          Ansor Market foydalanuvchilariga umumiy Telegram xabarlarini yuborish.
         </Text>
       </Stack>
 
       <Paper withBorder radius="md" p="md">
         <Stack>
           <Group grow align="flex-start">
-            <TextInput label="Title" value={title} onChange={(e) => setTitle(e.currentTarget.value)} />
-            <TextInput label="Image URL" value={imageUrl} onChange={(e) => setImageUrl(e.currentTarget.value)} />
-            <TextInput label="Target URL" value={targetUrl} onChange={(e) => setTargetUrl(e.currentTarget.value)} />
+            <TextInput label="Sarlavha" value={title} onChange={(e) => setTitle(e.currentTarget.value)} />
+            <TextInput label="Rasm URL" value={imageUrl} onChange={(e) => setImageUrl(e.currentTarget.value)} />
+            <TextInput label="Havola URL" value={targetUrl} onChange={(e) => setTargetUrl(e.currentTarget.value)} />
           </Group>
-          <Textarea label="Message" minRows={4} value={body} onChange={(e) => setBody(e.currentTarget.value)} />
+          <Textarea label="Xabar matni" minRows={4} value={body} onChange={(e) => setBody(e.currentTarget.value)} />
           <Group justify="flex-end">
             <Button color="parfum" loading={creating} onClick={submit}>
-              Create Draft
+              Qoralama yaratish
             </Button>
           </Group>
         </Stack>
@@ -79,17 +89,17 @@ export function BroadcastsPage() {
 
       <Paper withBorder radius="md" p="md">
         <Group justify="space-between">
-          <Title order={4}>History</Title>
-          {isLoading ? <Text size="sm" c="dimmed">Loading...</Text> : null}
+          <Title order={4}>Xabarlar tarixi</Title>
+          {isLoading ? <Text size="sm" c="dimmed">Yuklanmoqda...</Text> : null}
         </Group>
         <Table striped highlightOnHover mt="sm">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Title</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Sent</Table.Th>
-              <Table.Th>Errors</Table.Th>
-              <Table.Th>Created</Table.Th>
+              <Table.Th>Sarlavha</Table.Th>
+              <Table.Th>Holati</Table.Th>
+              <Table.Th>Yuborildi</Table.Th>
+              <Table.Th>Xatolar</Table.Th>
+              <Table.Th>Yaratilgan</Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -103,29 +113,39 @@ export function BroadcastsPage() {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  <Badge variant="light">{row.status}</Badge>
+                  <Badge variant="light">{BROADCAST_STATUS_LABEL[row.status]}</Badge>
                 </Table.Td>
                 <Table.Td>{row.sentCount}</Table.Td>
                 <Table.Td>{row.errorCount}</Table.Td>
                 <Table.Td>{dayjs(row.createdAt).format('DD.MM.YYYY HH:mm')}</Table.Td>
                 <Table.Td ta="right">
-                  <ActionIcon variant="subtle" color="parfum" onClick={() => setConfirming(row)}>
-                    <IconSend size={18} />
-                  </ActionIcon>
+                  <Group justify="flex-end" gap={4}>
+                    <ActionIcon variant="subtle" color="parfum" onClick={() => setConfirming(row)}>
+                      <IconSend size={18} />
+                    </ActionIcon>
+                    <ActionIcon variant="subtle" color="red" onClick={() => setRemoving(row)}>
+                      <IconTrash size={18} />
+                    </ActionIcon>
+                  </Group>
                 </Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
         </Table>
+        {!isLoading && data.length === 0 ? (
+          <Text size="sm" c="dimmed" ta="center" py="md">
+            Xabarlar topilmadi.
+          </Text>
+        ) : null}
       </Paper>
 
-      <Modal opened={confirming !== null} onClose={() => setConfirming(null)} title="Send broadcast now">
+      <Modal opened={confirming !== null} onClose={() => setConfirming(null)} title="Xabarni hozir yuborish">
         <Text size="sm">
-          Send "{confirming?.title}" to Telegram users now?
+          «{confirming?.title}» xabari barcha foydalanuvchilarga yuborilsinmi?
         </Text>
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={() => setConfirming(null)}>
-            Cancel
+            Bekor qilish
           </Button>
           <Button
             color="parfum"
@@ -138,14 +158,39 @@ export function BroadcastsPage() {
                 setConfirming(null);
                 notifications.show({
                   color: 'green',
-                  message: `Sent ${result.sent}; errors ${result.errors}`,
+                  message: `Yuborildi: ${result.sent}; xatolar: ${result.errors}`,
                 });
               } catch {
-                notifications.show({ color: 'red', message: 'Could not send broadcast' });
+                notifications.show({ color: 'red', message: 'Xabarni yuborib bo‘lmadi.' });
               }
             }}
           >
-            Send
+            Yuborish
+          </Button>
+        </Group>
+      </Modal>
+
+      <Modal opened={removing !== null} onClose={() => setRemoving(null)} title="Xabarni o‘chirish">
+        <Text size="sm">«{removing?.title}» xabari o‘chirilsinmi? Bu amalni qaytarib bo‘lmaydi.</Text>
+        <Group justify="flex-end" mt="lg">
+          <Button variant="default" onClick={() => setRemoving(null)}>
+            Bekor qilish
+          </Button>
+          <Button
+            color="red"
+            loading={deleting}
+            onClick={async () => {
+              if (!removing) return;
+              try {
+                await deleteBroadcast(removing.id).unwrap();
+                setRemoving(null);
+                notifications.show({ color: 'green', message: 'Xabar o‘chirildi.' });
+              } catch {
+                notifications.show({ color: 'red', message: 'Xabarni o‘chirib bo‘lmadi.' });
+              }
+            }}
+          >
+            O‘chirish
           </Button>
         </Group>
       </Modal>

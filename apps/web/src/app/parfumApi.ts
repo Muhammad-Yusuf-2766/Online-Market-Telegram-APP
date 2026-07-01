@@ -216,6 +216,12 @@ export type Banner = {
   sortOrder: number;
 };
 
+export type MarketBranding = {
+  marketName: string;
+  marketSlogan: string;
+  marketLogoUrl: string | null;
+};
+
 export type UserNotification = {
   id: string;
   kind: string;
@@ -280,6 +286,7 @@ export const parfumApi = createApi({
     'Wishlist',
     'Notification',
     'Banner',
+    'Branding',
     'Cart',
     'MeasurementUnit',
   ],
@@ -384,6 +391,10 @@ export const parfumApi = createApi({
     getBanners: build.query<Banner[], void>({
       query: () => '/banners',
       providesTags: [{ type: 'Banner', id: 'LIST' }],
+    }),
+    getMarketBranding: build.query<MarketBranding, void>({
+      query: () => '/settings/branding',
+      providesTags: [{ type: 'Branding', id: 'CURRENT' }],
     }),
     getProductFeedbackSubmitEligibility: build.query<
       ProductFeedbackSubmitEligibility,
@@ -620,6 +631,7 @@ export const {
   useGetCategoriesQuery,
   useGetMeasurementUnitsQuery,
   useGetBannersQuery,
+  useGetMarketBrandingQuery,
   useGetProductFeedbackSubmitEligibilityQuery,
   useGetProductFeedbackQuery,
   useSubmitProductFeedbackMutation,

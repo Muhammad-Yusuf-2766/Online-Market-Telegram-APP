@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Badge,
   Button,
+  FileInput,
   Group,
   Modal,
   NumberInput,
@@ -17,7 +18,7 @@ import {
   Title,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconPencil, IconPlus, IconTrash, IconUpload } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   useCreateProductMutation,
@@ -26,9 +27,11 @@ import {
   useGetMeasurementUnitsQuery,
   useGetProductsQuery,
   useUpdateProductMutation,
+  useUploadProductImageMutation,
   type Product,
   type ProductWritePayload,
 } from '../app/parfumApi';
+import { useDebouncedSearch } from '../shared/hooks/useDebouncedSearch';
 import { formatPrice } from '../shared/lib/money';
 
 const EMPTY_FORM = {
@@ -93,13 +96,14 @@ function payloadFromForm(form: ProductFormState): ProductWritePayload {
 
 export function ProductsPage() {
   const [q, setQ] = useState('');
+  const debouncedQ = useDebouncedSearch(q);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
   const { data, isLoading, isFetching } = useGetProductsQuery({
     page: 1,
     pageSize: 100,
-    q: q || undefined,
+    q: debouncedQ || undefined,
     categoryId: categoryId || undefined,
   });
   const { data: categories = [] } = useGetCategoriesQuery();
@@ -107,6 +111,7 @@ export function ProductsPage() {
   const [createProduct, { isLoading: creating }] = useCreateProductMutation();
   const [updateProduct, { isLoading: updating }] = useUpdateProductMutation();
   const [deleteProduct, { isLoading: deleting }] = useDeleteProductMutation();
+  const [uploadProductImage, { isLoading: uploadingImage }] = useUploadProductImageMutation();
 
   const categoryOptions = useMemo(
     () => categories.map((category) => ({ value: category.id, label: category.name })),
@@ -135,7 +140,7 @@ export function ProductsPage() {
   async function submit() {
     const payload = payloadFromForm(form);
     if (!payload.title || !payload.categoryId || !payload.measurementUnitId) {
-      notifications.show({ color: 'orange', message: 'Title, category, and unit are required' });
+      notifications.show({ color: 'orange', message: 'Nomi, bo‘limi va o‘lchov birligi majburiy.' });
       return;
     }
     try {
@@ -146,9 +151,34 @@ export function ProductsPage() {
       }
       setEditing(null);
       setForm(EMPTY_FORM);
-      notifications.show({ color: 'green', message: 'Product saved' });
+      notifications.show({ color: 'green', message: 'Mahsulot saqlandi.' });
     } catch {
-      notifications.show({ color: 'red', message: 'Could not save product' });
+      notifications.show({ color: 'red', message: 'Mahsulotni saqlab bo‘lmadi.' });
+    }
+  }
+
+  async function uploadImage(file: File | null) {
+    if (!file) return;
+    const currentImages = form.imagesText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (currentImages.length >= 2) {
+      notifications.show({ color: 'orange', message: 'Mahsulot uchun ko‘pi bilan 2 ta rasm qo‘shiladi.' });
+      return;
+    }
+    try {
+      const result = await uploadProductImage(file).unwrap();
+      setForm((prev) => {
+        const images = prev.imagesText
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean);
+        return { ...prev, imagesText: [...images, result.url].slice(0, 2).join('\n') };
+      });
+      notifications.show({ color: 'green', message: 'Rasm yuklandi.' });
+    } catch {
+      notifications.show({ color: 'red', message: 'Rasmni yuklab bo‘lmadi.' });
     }
   }
 
@@ -158,26 +188,26 @@ export function ProductsPage() {
     <Stack gap="md">
       <Group justify="space-between" align="flex-end">
         <Stack gap={4}>
-          <Title order={2}>Products</Title>
+          <Title order={2}>Mahsulotlar</Title>
           <Text c="dimmed" size="sm">
-            Manage halal market products, KRW pricing, measurement units, and stock.
+            Halol mahsulotlar, KRW narxlari, o‘lchov birliklari va ombor qoldig‘ini boshqarish.
           </Text>
         </Stack>
         <Button color="parfum" leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          New Product
+          Yangi mahsulot
         </Button>
       </Group>
 
       <Group align="flex-end">
         <TextInput
-          label="Search"
-          placeholder="Product title"
+          label="Qidirish"
+          placeholder="Mahsulot nomi"
           value={q}
           onChange={(e) => setQ(e.currentTarget.value)}
           style={{ flex: 1 }}
         />
         <Select
-          label="Category"
+          label="Bo‘lim"
           data={categoryOptions}
           value={categoryId}
           clearable
@@ -187,18 +217,18 @@ export function ProductsPage() {
 
       <Paper withBorder radius="md" p="md">
         {isLoading ? (
-          <Text c="dimmed">Loading...</Text>
+          <Text c="dimmed">Yuklanmoqda...</Text>
         ) : (
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Product</Table.Th>
-                <Table.Th>Category</Table.Th>
-                <Table.Th>Unit</Table.Th>
-                <Table.Th ta="right">Price</Table.Th>
-                <Table.Th>Stock</Table.Th>
-                <Table.Th>Sections</Table.Th>
-                <Table.Th>Status</Table.Th>
+                <Table.Th>Mahsulot</Table.Th>
+                <Table.Th>Bo‘lim</Table.Th>
+                <Table.Th>Birlik</Table.Th>
+                <Table.Th ta="right">Narx</Table.Th>
+                <Table.Th>Qoldiq</Table.Th>
+                <Table.Th>Bo‘limlar</Table.Th>
+                <Table.Th>Holati</Table.Th>
                 <Table.Th />
               </Table.Tr>
             </Table.Thead>
@@ -208,7 +238,7 @@ export function ProductsPage() {
                   <Table.Td>
                     <Text fw={500}>{product.title}</Text>
                     <Text size="xs" c="dimmed">
-                      {product.images.length} image{product.images.length === 1 ? '' : 's'}
+                      {product.images.length} ta rasm
                     </Text>
                   </Table.Td>
                   <Table.Td>{product.category?.name ?? '-'}</Table.Td>
@@ -221,13 +251,13 @@ export function ProductsPage() {
                   </Table.Td>
                   <Table.Td>
                     <Group gap={4}>
-                      {product.isOnSale ? <Badge size="xs" color="red" variant="light">Sale</Badge> : null}
-                      {product.isBestSeller ? <Badge size="xs" color="blue" variant="light">Bestseller</Badge> : null}
+                      {product.isOnSale ? <Badge size="xs" color="red" variant="light">Chegirma</Badge> : null}
+                      {product.isBestSeller ? <Badge size="xs" color="blue" variant="light">Ko‘p sotilgan</Badge> : null}
                     </Group>
                   </Table.Td>
                   <Table.Td>
                     <Badge color={product.isActive ? 'green' : 'gray'} variant="light">
-                      {product.isActive ? 'Active' : 'Hidden'}
+                      {product.isActive ? 'Faol' : 'Yashirilgan'}
                     </Badge>
                   </Table.Td>
                   <Table.Td>
@@ -240,8 +270,9 @@ export function ProductsPage() {
                         color="red"
                         loading={deleting}
                         onClick={async () => {
-                          if (!window.confirm(`Delete ${product.title}?`)) return;
+                          if (!window.confirm(`«${product.title}» mahsuloti o‘chirilsinmi?`)) return;
                           await deleteProduct(product.id).unwrap();
+                          notifications.show({ color: 'green', message: 'Mahsulot o‘chirildi.' });
                         }}
                       >
                         <IconTrash size={16} />
@@ -253,9 +284,14 @@ export function ProductsPage() {
             </Table.Tbody>
           </Table>
         )}
+        {!isLoading && (data?.items?.length ?? 0) === 0 ? (
+          <Text size="sm" c="dimmed" ta="center" py="md">
+            Mahsulotlar topilmadi.
+          </Text>
+        ) : null}
         {isFetching && !isLoading ? (
           <Text size="xs" c="dimmed" mt="sm">
-            Refreshing...
+            Yangilanmoqda...
           </Text>
         ) : null}
       </Paper>
@@ -266,54 +302,54 @@ export function ProductsPage() {
           setEditing(null);
           setForm(EMPTY_FORM);
         }}
-        title={editing ? 'Edit product' : 'New product'}
+        title={editing ? 'Mahsulotni tahrirlash' : 'Yangi mahsulot'}
         size="xl"
       >
         <Stack>
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
-              label="Title"
+              label="Nomi"
               value={form.title}
               onChange={(e) => setForm((prev) => ({ ...prev, title: e.currentTarget.value }))}
             />
             <NumberInput
-              label="Price (KRW)"
+              label="Narx (KRW)"
               min={0}
               value={form.priceKrw}
               onChange={(value) => setForm((prev) => ({ ...prev, priceKrw: Number(value) || 0 }))}
             />
             <Select
-              label="Category"
+              label="Bo‘lim"
               data={categoryOptions}
               value={form.categoryId}
               onChange={(value) => setForm((prev) => ({ ...prev, categoryId: value ?? '' }))}
             />
             <Select
-              label="Measurement unit"
+              label="O‘lchov birligi"
               data={unitOptions}
               value={form.measurementUnitId}
               onChange={(value) => setForm((prev) => ({ ...prev, measurementUnitId: value ?? '' }))}
             />
             <NumberInput
-              label="Stock quantity"
+              label="Ombor qoldig‘i"
               min={0}
               value={form.stockQuantity}
               onChange={(value) => setForm((prev) => ({ ...prev, stockQuantity: Number(value) || 0 }))}
             />
             <NumberInput
-              label="Low stock threshold"
+              label="Kam qoldiq chegarasi"
               min={0}
               value={form.lowStockThreshold}
               onChange={(value) => setForm((prev) => ({ ...prev, lowStockThreshold: Number(value) || 0 }))}
             />
             <NumberInput
-              label="Old price (KRW)"
+              label="Eski narx (KRW)"
               min={0}
               value={form.oldPriceKrw}
               onChange={(value) => setForm((prev) => ({ ...prev, oldPriceKrw: Number(value) || 0 }))}
             />
             <NumberInput
-              label="Discount percent"
+              label="Chegirma foizi"
               min={0}
               max={100}
               value={form.discountPercent}
@@ -321,31 +357,41 @@ export function ProductsPage() {
             />
           </SimpleGrid>
           <Textarea
-            label="Description"
+            label="Tavsif"
             minRows={3}
             value={form.description}
             onChange={(e) => setForm((prev) => ({ ...prev, description: e.currentTarget.value }))}
           />
           <Textarea
-            label="Image URLs"
-            description="One URL per line; backend accepts up to 2 images."
+            label="Rasm URL manzillari"
+            description="Har qatorda bitta URL; backend ko‘pi bilan 2 ta rasm qabul qiladi."
             minRows={2}
             value={form.imagesText}
             onChange={(e) => setForm((prev) => ({ ...prev, imagesText: e.currentTarget.value }))}
           />
+          <FileInput
+            label="Rasm faylini yuklash"
+            description="JPG, PNG, WebP yoki GIF. Yuklangandan so‘ng URL ro‘yxatga qo‘shiladi."
+            placeholder="Rasm tanlang"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            leftSection={<IconUpload size={16} />}
+            clearable
+            disabled={uploadingImage}
+            onChange={(file) => void uploadImage(file)}
+          />
           <Group>
             <Switch
-              label="Active"
+              label="Faol"
               checked={form.isActive}
               onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.currentTarget.checked }))}
             />
             <Switch
-              label="Sale section"
+              label="Chegirma bo‘limi"
               checked={form.isOnSale}
               onChange={(e) => setForm((prev) => ({ ...prev, isOnSale: e.currentTarget.checked }))}
             />
             <Switch
-              label="Bestseller section"
+              label="Ko‘p sotilganlar bo‘limi"
               checked={form.isBestSeller}
               onChange={(e) => setForm((prev) => ({ ...prev, isBestSeller: e.currentTarget.checked }))}
             />
@@ -358,10 +404,10 @@ export function ProductsPage() {
                 setForm(EMPTY_FORM);
               }}
             >
-              Cancel
+              Bekor qilish
             </Button>
             <Button color="parfum" loading={creating || updating} onClick={submit}>
-              Save
+              Saqlash
             </Button>
           </Group>
         </Stack>

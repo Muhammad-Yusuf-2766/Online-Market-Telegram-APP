@@ -1,6 +1,6 @@
 {
   "layout": {
-    "brand": "Ansor Market Admin"
+    "brand": "Ansor Market boshqaruv"
   },
   "nav": {
     "welcome": "Bosh sahifa",
@@ -15,6 +15,7 @@
     "finance": "Moliya",
     "broadcasts": "Xabar tarqatish",
     "inventory": "Ombor qoldig‘i",
+    "settingsBranding": "Market brendi",
     "settingsAdminUsers": "Administratorlar"
   },
   "navSections": {
@@ -114,8 +115,27 @@
     "linkUrl": "Havola",
     "active": "Faol",
     "create": "Banner qo‘shish",
+    "uploadImage": "Rasm faylini yuklash",
+    "uploadImagePlaceholder": "Banner rasmi tanlang",
+    "uploaded": "Banner rasmi yuklandi.",
+    "uploadError": "Banner rasmini yuklab bo‘lmadi.",
+    "modalEdit": "Bannerni tahrirlash",
     "modalDelete": "Bannerni o‘chirish",
     "deleteConfirm": "«{{title}}» banneri o‘chirilsinmi? Bu amalni qaytarib bo‘lmaydi."
+  },
+  "branding": {
+    "title": "Market brendi",
+    "subtitle": "Admin panel va Telegram mini-ilovasida ko‘rinadigan nom, shior va logotip.",
+    "marketName": "Market nomi",
+    "marketSlogan": "Market shiori",
+    "marketLogoUrl": "Logotip URL",
+    "uploadLogo": "Logotip yuklash",
+    "uploadLogoPlaceholder": "Rasm faylini tanlang",
+    "logoPreview": "Joriy logotip",
+    "saved": "Market brendi saqlandi.",
+    "saveError": "Market brendini saqlab bo‘lmadi.",
+    "logoUploaded": "Logotip yuklandi.",
+    "logoUploadError": "Logotipni yuklab bo‘lmadi."
   },
   "productFeedback": {
     "title": "Mahsulot sharhlari",
@@ -136,11 +156,11 @@
     "actionError": "Holatni yangilab bo‘lmadi."
   },
   "orderStatus": {
-    "PENDING": "Yangi",
-    "CONFIRMED": "Tasdiqlangan",
+    "PENDING": "Kutilmoqda",
+    "CONFIRMED": "Tasdiqlandi",
     "PREPARING": "Tayyorlanmoqda",
-    "SHIPPED": "Yo‘lda",
-    "DELIVERED": "Yetkazilgan",
-    "CANCELLED": "Bekor qilingan"
+    "SHIPPED": "Yetkazilmoqda",
+    "DELIVERED": "Yetkazildi",
+    "CANCELLED": "Bekor qilindi"
   }
 }

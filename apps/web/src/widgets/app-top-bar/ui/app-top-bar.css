@@ -34,6 +34,14 @@
   color: #fff;
   font-weight: 800;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.tma-top-bar__logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .tma-top-bar__brand-copy {

@@ -1,8 +1,17 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { Injectable, ServiceUnavailableException } from "@nestjs/common";
+import { BadRequestException, Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { extname, join } from "node:path";
+
+export type LocalImageUpload = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
 
 @Injectable()
 export class StorageService {
@@ -46,6 +55,29 @@ export class StorageService {
     return { uploadUrl, key, publicUrl };
   }
 
+  async saveLocalImage(
+    file: LocalImageUpload | undefined,
+    folder: "product-images" | "banner-images" | "branding",
+  ): Promise<{ url: string }> {
+    if (!file) {
+      throw new BadRequestException("Image file is required");
+    }
+    if (!this.isAllowedImageType(file.mimetype)) {
+      throw new BadRequestException("Only JPG, PNG, WebP, and GIF images are allowed");
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException("Image file must be 5 MB or smaller");
+    }
+
+    const ext = this.extensionFromContentType(file.mimetype) || this.safeExtension(file.originalname);
+    const filename = `${randomUUID()}${ext}`;
+    const uploadDir = join(__dirname, "..", "..", "uploads", folder);
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(join(uploadDir, filename), file.buffer);
+
+    return { url: `${this.localPublicBase()}/uploads/${folder}/${filename}` };
+  }
+
   private getOrCreateClient(accessKey: string, secretKey: string): S3Client {
     if (this.client) {
       return this.client;
@@ -82,5 +114,23 @@ export class StorageService {
       "image/gif": ".gif",
     };
     return map[base] ?? "";
+  }
+
+  private isAllowedImageType(contentType: string): boolean {
+    const base = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
+    return ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(base);
+  }
+
+  private safeExtension(filename: string): string {
+    const ext = extname(filename).toLowerCase();
+    return [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(ext) ? ext : ".jpg";
+  }
+
+  private localPublicBase(): string {
+    const configured =
+      this.config.get<string>("API_PUBLIC_URL") ??
+      this.config.get<string>("PUBLIC_API_URL") ??
+      `http://localhost:${this.config.get<string>("PORT") ?? "3000"}`;
+    return configured.replace(/\/$/, "");
   }
 }

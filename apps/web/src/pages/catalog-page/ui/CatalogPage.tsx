@@ -99,9 +99,6 @@ function ProductSection({
     <section className="home-section">
       <div className="home-section__head">
         <h2 className="home-section__title">{title}</h2>
-        <Link to="/search" className="home-section__link">
-          {t('catalog.viewAll')}
-        </Link>
       </div>
       {loading && !hasProducts ? (
         <>

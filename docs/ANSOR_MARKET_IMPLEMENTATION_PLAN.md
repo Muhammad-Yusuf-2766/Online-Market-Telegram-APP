@@ -1,6 +1,6 @@
 # Ansor Market Implementation Plan
 
-Last updated: 2026-06-25
+Last updated: 2026-07-01
 
 ## Current Baseline
 
@@ -49,7 +49,17 @@ The main refactor should preserve these patterns and remove only the perfume/rew
   - Telegram order status bot messages are now always generated in Uzbek regardless of user locale
   - `pnpm --filter api build`, `pnpm --filter web build`, `pnpm --filter admin build`, and `pnpm --filter api test` passed
   - focused runtime smoke passed for admin notification realtime payload/unread state, broadcast list/create/send, order status update, and Uzbek status copy
-- Next: restore the dedicated e2e Postgres database on port 5433 or repoint the e2e environment deliberately, then run `pnpm --filter api test:e2e`.
+- 2026-07-01: Admin branding, local uploads, and banner preview checkpoint completed:
+  - added database-backed `MarketBranding` settings with public and admin endpoints
+  - added admin Settings → Market brendi page and dynamic admin header branding
+  - added Telegram Mini App dynamic header branding
+  - added local backend upload endpoints for product images, banner images, and branding logos
+  - product image uploads are stored separately from banner images
+  - admin product and banner forms support URL entry plus local file upload
+  - Telegram sale/bestseller section titles were shortened and “view all” links removed
+  - Telegram banner taps now open a larger image preview modal
+  - `corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false`, API/web/admin builds, and API unit tests passed
+- Next: apply the new Prisma migration to the active dev database, manually QA branding/uploads/banner preview, and restore the dedicated e2e Postgres database on port 5433 or repoint the e2e environment deliberately before running `corepack pnpm --filter api test:e2e`.
 
 ## Phase 1 - Backend Schema and APIs
 

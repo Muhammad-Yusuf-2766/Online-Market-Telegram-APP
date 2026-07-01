@@ -22,17 +22,12 @@ import {
   type AdminOrder,
   type OrderStatus,
 } from '../app/parfumApi';
+import { useDebouncedSearch } from '../shared/hooks/useDebouncedSearch';
 import { formatPrice } from '../shared/lib/money';
+import { ORDER_STATUS_LABEL, ORDER_STATUS_MANTINE_COLOR } from '../shared/lib/orderStatusMantine';
 
 const PAGE_SIZE = 20;
 const STATUSES: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
-
-function statusColor(status: OrderStatus) {
-  if (status === 'DELIVERED') return 'green';
-  if (status === 'CANCELLED') return 'red';
-  if (status === 'PENDING') return 'yellow';
-  return 'blue';
-}
 
 function addressLines(order: AdminOrder) {
   return [
@@ -40,19 +35,20 @@ function addressLines(order: AdminOrder) {
     order.roadAddressSnapshot || order.jibunAddressSnapshot,
     order.buildingNameSnapshot,
     order.detailAddressSnapshot,
-    order.zoneNoSnapshot ? `Zone ${order.zoneNoSnapshot}` : null,
+    order.zoneNoSnapshot ? `Pochta indeksi ${order.zoneNoSnapshot}` : null,
   ].filter(Boolean);
 }
 
 export function OrdersPage() {
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
+  const debouncedQ = useDebouncedSearch(q);
   const [status, setStatus] = useState<OrderStatus | ''>('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data, isLoading, isFetching } = useGetOrdersQuery({
     page,
     pageSize: PAGE_SIZE,
-    q: q || undefined,
+    q: debouncedQ || undefined,
     status: status || undefined,
   });
   const { data: selectedOrder } = useGetAdminOrderQuery(selectedId ?? '', { skip: !selectedId });
@@ -65,9 +61,9 @@ export function OrdersPage() {
   async function changeStatus(id: string, next: OrderStatus) {
     try {
       await updateStatus({ id, status: next }).unwrap();
-      notifications.show({ color: 'green', message: 'Order status updated' });
+      notifications.show({ color: 'green', message: 'Buyurtma holati yangilandi.' });
     } catch {
-      notifications.show({ color: 'red', message: 'Could not update order status' });
+      notifications.show({ color: 'red', message: 'Buyurtma holatini yangilab bo‘lmadi.' });
     }
   }
 
@@ -75,18 +71,18 @@ export function OrdersPage() {
     <Stack gap="md">
       <Group justify="space-between" align="flex-end">
         <Stack gap={4}>
-          <Title order={2}>Orders</Title>
+          <Title order={2}>Buyurtmalar</Title>
           <Text size="sm" c="dimmed">
-            Manage Ansor Market order status, delivery snapshots, and line items.
+            Buyurtma holati, yetkazish manzili va mahsulot qatorlarini boshqarish.
           </Text>
         </Stack>
-        {isFetching ? <Text size="sm" c="dimmed">Refreshing...</Text> : null}
+        {isFetching ? <Text size="sm" c="dimmed">Yangilanmoqda...</Text> : null}
       </Group>
 
       <Group align="flex-end">
         <TextInput
-          label="Search"
-          placeholder="Order ID, customer, Telegram"
+          label="Qidirish"
+          placeholder="Buyurtma ID, mijoz, Telegram"
           value={q}
           onChange={(e) => {
             setQ(e.currentTarget.value);
@@ -95,9 +91,9 @@ export function OrdersPage() {
           style={{ flex: 1 }}
         />
         <Select
-          label="Status"
+          label="Holati"
           clearable
-          data={STATUSES}
+          data={STATUSES.map((value) => ({ value, label: ORDER_STATUS_LABEL[value] }))}
           value={status}
           onChange={(value) => {
             setStatus((value as OrderStatus | null) ?? '');
@@ -108,18 +104,18 @@ export function OrdersPage() {
 
       <Paper withBorder radius="md" p="md">
         {isLoading ? (
-          <Text c="dimmed">Loading...</Text>
+          <Text c="dimmed">Yuklanmoqda...</Text>
         ) : (
           <>
             <Table striped highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Order</Table.Th>
-                  <Table.Th>Customer</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Items</Table.Th>
-                  <Table.Th ta="right">Total</Table.Th>
-                  <Table.Th>Created</Table.Th>
+                  <Table.Th>Buyurtma</Table.Th>
+                  <Table.Th>Mijoz</Table.Th>
+                  <Table.Th>Holati</Table.Th>
+                  <Table.Th>Mahsulotlar</Table.Th>
+                  <Table.Th ta="right">Jami</Table.Th>
+                  <Table.Th>Yaratilgan</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -137,8 +133,8 @@ export function OrdersPage() {
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <Badge color={statusColor(order.status)} variant="light">
-                        {order.status}
+                      <Badge color={ORDER_STATUS_MANTINE_COLOR[order.status]} variant="light">
+                        {ORDER_STATUS_LABEL[order.status]}
                       </Badge>
                     </Table.Td>
                     <Table.Td>{order.items?.length ?? 0}</Table.Td>
@@ -148,6 +144,11 @@ export function OrdersPage() {
                 ))}
               </Table.Tbody>
             </Table>
+            {(data?.items?.length ?? 0) === 0 ? (
+              <Text size="sm" c="dimmed" ta="center" py="md">
+                Buyurtmalar topilmadi.
+              </Text>
+            ) : null}
             <Group justify="center" mt="md">
               <Pagination total={totalPages} value={page} onChange={setPage} />
             </Group>
@@ -155,7 +156,7 @@ export function OrdersPage() {
         )}
       </Paper>
 
-      <Modal opened={selectedId !== null} onClose={() => setSelectedId(null)} title="Order details" size="xl">
+      <Modal opened={selectedId !== null} onClose={() => setSelectedId(null)} title="Buyurtma tafsilotlari" size="xl">
         {selectedOrder ? (
           <Stack>
             <Group justify="space-between">
@@ -166,7 +167,7 @@ export function OrdersPage() {
                 </Text>
               </Stack>
               <Select
-                data={STATUSES}
+                data={STATUSES.map((value) => ({ value, label: ORDER_STATUS_LABEL[value] }))}
                 value={selectedOrder.status}
                 disabled={updating}
                 onChange={(value) => {
@@ -176,7 +177,7 @@ export function OrdersPage() {
             </Group>
 
             <Paper withBorder radius="md" p="sm">
-              <Text fw={600}>Delivery address</Text>
+              <Text fw={600}>Yetkazish manzili</Text>
               {addressLines(selectedOrder).map((line) => (
                 <Text key={line} size="sm">
                   {line}
@@ -184,7 +185,7 @@ export function OrdersPage() {
               ))}
               {selectedOrder.notes ? (
                 <Text size="sm" c="dimmed" mt={6}>
-                  Notes: {selectedOrder.notes}
+                  Izoh: {selectedOrder.notes}
                 </Text>
               ) : null}
             </Paper>
@@ -192,10 +193,10 @@ export function OrdersPage() {
             <Table striped>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Product</Table.Th>
-                  <Table.Th>Unit</Table.Th>
-                  <Table.Th>Qty</Table.Th>
-                  <Table.Th ta="right">Unit price</Table.Th>
+                  <Table.Th>Mahsulot</Table.Th>
+                  <Table.Th>Birlik</Table.Th>
+                  <Table.Th>Miqdor</Table.Th>
+                  <Table.Th ta="right">Birlik narxi</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -211,16 +212,16 @@ export function OrdersPage() {
             </Table>
 
             <Group justify="flex-end">
-              <Text>Subtotal: {formatPrice(selectedOrder.subtotalKrw)}</Text>
-              <Text>Discount: {formatPrice(selectedOrder.discountKrw)}</Text>
-              <Text fw={700}>Total: {formatPrice(selectedOrder.totalKrw)}</Text>
+              <Text>Oraliq jami: {formatPrice(selectedOrder.subtotalKrw)}</Text>
+              <Text>Chegirma: {formatPrice(selectedOrder.discountKrw)}</Text>
+              <Text fw={700}>Jami: {formatPrice(selectedOrder.totalKrw)}</Text>
             </Group>
             <Button variant="default" onClick={() => setSelectedId(null)}>
-              Close
+              Yopish
             </Button>
           </Stack>
         ) : (
-          <Text c="dimmed">Loading...</Text>
+          <Text c="dimmed">Yuklanmoqda...</Text>
         )}
       </Modal>
     </Stack>

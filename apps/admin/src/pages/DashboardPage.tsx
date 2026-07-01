@@ -2,6 +2,7 @@ import { Badge, Group, Paper, SimpleGrid, Stack, Table, Text, Title } from '@man
 import dayjs from 'dayjs';
 import { useGetDashboardOverviewQuery, useGetDashboardStatsQuery } from '../app/parfumApi';
 import { formatPrice } from '../shared/lib/money';
+import { ORDER_STATUS_LABEL } from '../shared/lib/orderStatusMantine';
 
 function StatCard({
   label,
@@ -39,9 +40,9 @@ export function DashboardPage() {
     <Stack gap="md">
       <Group justify="space-between" align="flex-end">
         <Stack gap={4}>
-          <Title order={2}>Dashboard</Title>
+          <Title order={2}>Asosiy panel</Title>
           <Text c="dimmed" size="sm">
-            Ansor Market overview for orders, products, inventory, and customers.
+            Buyurtmalar, mahsulotlar, ombor va foydalanuvchilar bo‘yicha Ansor Market ko‘rsatkichlari.
           </Text>
         </Stack>
         <Badge variant="light" color="parfum">
@@ -51,54 +52,54 @@ export function DashboardPage() {
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
         <StatCard
-          label="Revenue"
+          label="Daromad"
           value={overview ? formatPrice(overview.finance.revenueKrw) : overviewLoading ? '...' : '-'}
-          hint={overview ? `Delivered: ${formatPrice(overview.finance.deliveredRevenueKrw)}` : undefined}
+          hint={overview ? `Yetkazilgan: ${formatPrice(overview.finance.deliveredRevenueKrw)}` : undefined}
         />
         <StatCard
-          label="Orders"
+          label="Buyurtmalar"
           value={overview?.orders.total ?? (overviewLoading ? '...' : '-')}
-          hint={overview ? `Today: ${overview.orders.todayOrders}` : undefined}
+          hint={overview ? `Bugun: ${overview.orders.todayOrders}` : undefined}
         />
         <StatCard
-          label="Products"
+          label="Mahsulotlar"
           value={overview?.catalog.productCount ?? (overviewLoading ? '...' : '-')}
-          hint={overview ? `Sale ${overview.catalog.saleCount} · Bestseller ${overview.catalog.bestsellerCount}` : undefined}
+          hint={overview ? `Chegirma ${overview.catalog.saleCount} · Ko‘p sotilgan ${overview.catalog.bestsellerCount}` : undefined}
         />
         <StatCard
-          label="Inventory"
+          label="Ombor"
           value={overview?.inventory.totalStockQuantity ?? (overviewLoading ? '...' : '-')}
-          hint={overview ? `Low stock: ${overview.inventory.lowStockCount}` : undefined}
+          hint={overview ? `Kam qoldiq: ${overview.inventory.lowStockCount}` : undefined}
         />
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, md: 2 }}>
         <Paper withBorder radius="md" p="md">
-          <Title order={4}>Order Status</Title>
+          <Title order={4}>Buyurtma holatlari</Title>
           <Table mt="sm" striped>
             <Table.Tbody>
               <Table.Tr>
-                <Table.Td>Pending</Table.Td>
+                <Table.Td>{ORDER_STATUS_LABEL.PENDING}</Table.Td>
                 <Table.Td ta="right">{overview?.orders.pendingCount ?? '-'}</Table.Td>
               </Table.Tr>
               <Table.Tr>
-                <Table.Td>Confirmed</Table.Td>
+                <Table.Td>{ORDER_STATUS_LABEL.CONFIRMED}</Table.Td>
                 <Table.Td ta="right">{overview?.orders.confirmedCount ?? '-'}</Table.Td>
               </Table.Tr>
               <Table.Tr>
-                <Table.Td>Preparing</Table.Td>
+                <Table.Td>{ORDER_STATUS_LABEL.PREPARING}</Table.Td>
                 <Table.Td ta="right">{overview?.orders.preparingCount ?? '-'}</Table.Td>
               </Table.Tr>
               <Table.Tr>
-                <Table.Td>Shipped</Table.Td>
+                <Table.Td>{ORDER_STATUS_LABEL.SHIPPED}</Table.Td>
                 <Table.Td ta="right">{overview?.orders.shippedCount ?? '-'}</Table.Td>
               </Table.Tr>
               <Table.Tr>
-                <Table.Td>Delivered</Table.Td>
+                <Table.Td>{ORDER_STATUS_LABEL.DELIVERED}</Table.Td>
                 <Table.Td ta="right">{overview?.orders.deliveredCount ?? '-'}</Table.Td>
               </Table.Tr>
               <Table.Tr>
-                <Table.Td>Cancelled</Table.Td>
+                <Table.Td>{ORDER_STATUS_LABEL.CANCELLED}</Table.Td>
                 <Table.Td ta="right">{overview?.orders.cancelledCount ?? '-'}</Table.Td>
               </Table.Tr>
             </Table.Tbody>
@@ -106,29 +107,29 @@ export function DashboardPage() {
         </Paper>
 
         <Paper withBorder radius="md" p="md">
-          <Title order={4}>Engagement</Title>
+          <Title order={4}>Faollik</Title>
           <SimpleGrid cols={2} mt="sm">
-            <StatCard label="Users" value={overview?.users.total ?? '-'} hint={overview ? `7 days: ${overview.users.newLast7d}` : undefined} />
-            <StatCard label="Wishlist" value={overview?.engagement.wishlistCount ?? '-'} />
-            <StatCard label="Cart items" value={overview?.engagement.cartItemCount ?? '-'} />
-            <StatCard label="Reviews pending" value={overview?.engagement.productFeedbackPending ?? '-'} />
+            <StatCard label="Foydalanuvchilar" value={overview?.users.total ?? '-'} hint={overview ? `7 kun: ${overview.users.newLast7d}` : undefined} />
+            <StatCard label="Istaklar" value={overview?.engagement.wishlistCount ?? '-'} />
+            <StatCard label="Savatdagi mahsulotlar" value={overview?.engagement.cartItemCount ?? '-'} />
+            <StatCard label="Tekshiruvdagi sharhlar" value={overview?.engagement.productFeedbackPending ?? '-'} />
           </SimpleGrid>
         </Paper>
       </SimpleGrid>
 
       <Paper withBorder radius="md" p="md">
         <Group justify="space-between">
-          <Title order={4}>Last 14 Days</Title>
-          {statsLoading ? <Text size="sm" c="dimmed">Loading...</Text> : null}
+          <Title order={4}>Oxirgi 14 kun</Title>
+          {statsLoading ? <Text size="sm" c="dimmed">Yuklanmoqda...</Text> : null}
         </Group>
         <Table mt="sm" striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Date</Table.Th>
-              <Table.Th>Orders</Table.Th>
-              <Table.Th>New users</Table.Th>
-              <Table.Th>Cancelled</Table.Th>
-              <Table.Th ta="right">Revenue</Table.Th>
+              <Table.Th>Sana</Table.Th>
+              <Table.Th>Buyurtmalar</Table.Th>
+              <Table.Th>Yangi foydalanuvchilar</Table.Th>
+              <Table.Th>Bekor qilingan</Table.Th>
+              <Table.Th ta="right">Daromad</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>

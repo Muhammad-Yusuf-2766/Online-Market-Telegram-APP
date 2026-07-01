@@ -56,17 +56,21 @@ export class AdminUsersService {
     query: PaginationQueryDto & { q?: string },
   ): Promise<PaginatedResult<AdminCustomerRow>> {
     const { page, pageSize, skip } = paginationParams(query);
-    const where: Prisma.UserWhereInput = {};
-    const trimmedQ = query.q?.trim();
-    if (trimmedQ) {
-      where.OR = [
-        { telegramId: { contains: trimmedQ } },
-        { telegramUsername: { contains: trimmedQ, mode: "insensitive" } },
-        { firstName: { contains: trimmedQ, mode: "insensitive" } },
-        { lastName: { contains: trimmedQ, mode: "insensitive" } },
-        { phone: { contains: trimmedQ } },
-      ];
-    }
+    const terms = query.q?.trim().split(/\s+/).filter(Boolean) ?? [];
+    const where: Prisma.UserWhereInput =
+      terms.length > 0
+        ? {
+            AND: terms.map((term) => ({
+              OR: [
+                { telegramId: { contains: term } },
+                { telegramUsername: { contains: term, mode: "insensitive" } },
+                { firstName: { contains: term, mode: "insensitive" } },
+                { lastName: { contains: term, mode: "insensitive" } },
+                { phone: { contains: term } },
+              ],
+            })),
+          }
+        : {};
     const [total, items] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({

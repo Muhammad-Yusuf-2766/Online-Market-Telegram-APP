@@ -16,6 +16,15 @@ export const ORDER_STATUS_MANTINE_COLOR: Record<OrderStatus, MantineColor> = {
   CANCELLED: 'red',
 };
 
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  PENDING: 'Kutilmoqda',
+  CONFIRMED: 'Tasdiqlandi',
+  PREPARING: 'Tayyorlanmoqda',
+  SHIPPED: 'Yetkazilmoqda',
+  DELIVERED: 'Yetkazildi',
+  CANCELLED: 'Bekor qilindi',
+};
+
 export function orderStatusAccent(
   theme: MantineTheme,
   status: OrderStatus,

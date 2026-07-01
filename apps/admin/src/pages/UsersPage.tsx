@@ -3,16 +3,18 @@ import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGetUsersQuery } from '../app/parfumApi';
+import { useDebouncedSearch } from '../shared/hooks/useDebouncedSearch';
 
 const PAGE_SIZE = 20;
 
 export function UsersPage() {
   const [q, setQ] = useState('');
+  const debouncedQ = useDebouncedSearch(q);
   const [page, setPage] = useState(1);
   const { data, isLoading, isFetching, isError } = useGetUsersQuery({
     page,
     pageSize: PAGE_SIZE,
-    q: q || undefined,
+    q: debouncedQ || undefined,
   });
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE)),
@@ -23,17 +25,17 @@ export function UsersPage() {
     <Stack gap="md">
       <Group justify="space-between" align="flex-end">
         <Stack gap={4}>
-          <Title order={2}>Users</Title>
+          <Title order={2}>Foydalanuvchilar</Title>
           <Text c="dimmed" size="sm">
-            Telegram users, saved addresses, order counts, wishlist, and cart activity.
+            Telegram foydalanuvchilari, saqlangan manzillar, buyurtmalar, istaklar va savat faolligi.
           </Text>
         </Stack>
-        {isFetching ? <Text size="sm" c="dimmed">Refreshing...</Text> : null}
+        {isFetching ? <Text size="sm" c="dimmed">Yangilanmoqda...</Text> : null}
       </Group>
 
       <TextInput
-        label="Search"
-        placeholder="Telegram ID, username, name, phone"
+        label="Qidirish"
+        placeholder="Telegram ID, username, ism, familiya, telefon"
         value={q}
         onChange={(e) => {
           setQ(e.currentTarget.value);
@@ -44,21 +46,21 @@ export function UsersPage() {
       <Paper withBorder radius="md" p="md">
         {isError ? (
           <Text c="red" size="sm">
-            User admin endpoints are not available from the current backend module.
+            Foydalanuvchilar ro‘yxatini yuklab bo‘lmadi.
           </Text>
         ) : isLoading ? (
-          <Text c="dimmed">Loading...</Text>
+          <Text c="dimmed">Yuklanmoqda...</Text>
         ) : (
           <>
             <Table striped highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>User</Table.Th>
+                  <Table.Th>Foydalanuvchi</Table.Th>
                   <Table.Th>Telegram</Table.Th>
-                  <Table.Th>Phone</Table.Th>
-                  <Table.Th>Addresses</Table.Th>
-                  <Table.Th>Orders</Table.Th>
-                  <Table.Th>Joined</Table.Th>
+                  <Table.Th>Telefon</Table.Th>
+                  <Table.Th>Manzillar</Table.Th>
+                  <Table.Th>Buyurtmalar</Table.Th>
+                  <Table.Th>Qo‘shilgan</Table.Th>
                   <Table.Th />
                 </Table.Tr>
               </Table.Thead>
@@ -78,13 +80,18 @@ export function UsersPage() {
                     <Table.Td>{dayjs(user.createdAt).format('DD.MM.YYYY')}</Table.Td>
                     <Table.Td ta="right">
                       <Button component={Link} to={`/users/${user.id}`} size="xs" variant="light" color="parfum">
-                        Details
+                        Batafsil
                       </Button>
                     </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
             </Table>
+            {(data?.items?.length ?? 0) === 0 ? (
+              <Text size="sm" c="dimmed" ta="center" py="md">
+                Foydalanuvchilar topilmadi.
+              </Text>
+            ) : null}
             <Group justify="center" mt="md">
               <Pagination total={totalPages} value={page} onChange={setPage} />
             </Group>

@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Button,
+  FileInput,
   Group,
   Modal,
   Stack,
@@ -11,7 +12,7 @@ import {
   Title,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconTrash } from '@tabler/icons-react';
+import { IconPencil, IconTrash, IconUpload } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,6 +20,7 @@ import {
   useDeleteBannerMutation,
   useGetAdminBannersQuery,
   useUpdateBannerMutation,
+  useUploadBannerImageMutation,
 } from '../app/parfumApi';
 
 type BannerRow = {
@@ -34,11 +36,19 @@ export function BannersPage() {
   const { t } = useTranslation();
   const { data } = useGetAdminBannersQuery();
   const [createBanner, { isLoading: creating }] = useCreateBannerMutation();
-  const [updateBanner] = useUpdateBannerMutation();
+  const [updateBanner, { isLoading: updating }] = useUpdateBannerMutation();
   const [deleteBanner, { isLoading: deleting }] = useDeleteBannerMutation();
+  const [uploadBannerImage, { isLoading: uploading }] = useUploadBannerImageMutation();
   const [imageUrl, setImageUrl] = useState('');
   const [title, setTitle] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [editing, setEditing] = useState<BannerRow | null>(null);
+  const [editForm, setEditForm] = useState({
+    imageUrl: '',
+    title: '',
+    linkUrl: '',
+    isActive: true,
+  });
   const [removing, setRemoving] = useState<BannerRow | null>(null);
 
   async function submit() {
@@ -56,6 +66,48 @@ export function BannersPage() {
       notifications.show({ color: 'green', title: t('common.create'), message: '' });
     } catch {
       notifications.show({ color: 'red', title: t('common.error'), message: '' });
+    }
+  }
+
+  function openEdit(row: BannerRow) {
+    setEditing(row);
+    setEditForm({
+      imageUrl: row.imageUrl,
+      title: row.title ?? '',
+      linkUrl: row.linkUrl ?? '',
+      isActive: row.isActive,
+    });
+  }
+
+  async function submitEdit() {
+    if (!editing || !editForm.imageUrl.trim()) return;
+    try {
+      await updateBanner({
+        id: editing.id,
+        imageUrl: editForm.imageUrl.trim(),
+        title: editForm.title.trim() || null,
+        linkUrl: editForm.linkUrl.trim() || null,
+        isActive: editForm.isActive,
+      }).unwrap();
+      setEditing(null);
+      notifications.show({ color: 'green', title: t('common.save'), message: '' });
+    } catch {
+      notifications.show({ color: 'red', title: t('common.error'), message: '' });
+    }
+  }
+
+  async function upload(file: File | null, target: 'create' | 'edit') {
+    if (!file) return;
+    try {
+      const result = await uploadBannerImage(file).unwrap();
+      if (target === 'create') {
+        setImageUrl(result.url);
+      } else {
+        setEditForm((prev) => ({ ...prev, imageUrl: result.url }));
+      }
+      notifications.show({ color: 'green', message: t('banners.uploaded') });
+    } catch {
+      notifications.show({ color: 'red', message: t('banners.uploadError') });
     }
   }
 
@@ -86,6 +138,15 @@ export function BannersPage() {
           {t('banners.create')}
         </Button>
       </Group>
+      <FileInput
+        label={t('banners.uploadImage')}
+        placeholder={t('banners.uploadImagePlaceholder')}
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        leftSection={<IconUpload size={16} />}
+        clearable
+        disabled={uploading}
+        onChange={(file) => void upload(file, 'create')}
+      />
       <Table withTableBorder striped>
         <Table.Thead>
           <Table.Tr>
@@ -116,6 +177,9 @@ export function BannersPage() {
                 />
               </Table.Td>
               <Table.Td>
+                <ActionIcon variant="subtle" onClick={() => openEdit(row)} mr="xs">
+                  <IconPencil size={18} />
+                </ActionIcon>
                 <ActionIcon variant="subtle" color="red" onClick={() => setRemoving(row)}>
                   <IconTrash size={18} />
                 </ActionIcon>
@@ -124,6 +188,48 @@ export function BannersPage() {
           ))}
         </Table.Tbody>
       </Table>
+
+      <Modal opened={editing !== null} onClose={() => setEditing(null)} title={t('banners.modalEdit')}>
+        <Stack>
+          <TextInput
+            label={t('banners.imageUrl')}
+            value={editForm.imageUrl}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, imageUrl: e.currentTarget.value }))}
+          />
+          <FileInput
+            label={t('banners.uploadImage')}
+            placeholder={t('banners.uploadImagePlaceholder')}
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            leftSection={<IconUpload size={16} />}
+            clearable
+            disabled={uploading}
+            onChange={(file) => void upload(file, 'edit')}
+          />
+          <TextInput
+            label={t('banners.bannerTitle')}
+            value={editForm.title}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.currentTarget.value }))}
+          />
+          <TextInput
+            label={t('banners.linkUrl')}
+            value={editForm.linkUrl}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, linkUrl: e.currentTarget.value }))}
+          />
+          <Switch
+            label={t('banners.active')}
+            checked={editForm.isActive}
+            onChange={(e) => setEditForm((prev) => ({ ...prev, isActive: e.currentTarget.checked }))}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setEditing(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button color="parfum" loading={updating || uploading} onClick={submitEdit}>
+              {t('common.save')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Modal opened={removing !== null} onClose={() => setRemoving(null)} title={t('banners.modalDelete')}>
         <Text size="sm">

@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { useState } from 'react';
 import { useGetFinanceReportQuery } from '../app/parfumApi';
 import { formatPrice } from '../shared/lib/money';
+import { ORDER_STATUS_LABEL } from '../shared/lib/orderStatusMantine';
 
 function Kpi({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
@@ -32,36 +33,36 @@ export function FinancePage() {
     <Stack gap="md">
       <Group justify="space-between" align="flex-end">
         <Stack gap={4}>
-          <Title order={2}>Finance</Title>
+          <Title order={2}>Moliya</Title>
           <Text c="dimmed" size="sm">
-            KRW order totals grouped by day, status, product, and category.
+            Buyurtma summalarini kun, holat, mahsulot va bo‘lim bo‘yicha ko‘rish.
           </Text>
         </Stack>
         <Group align="flex-end">
-          <TextInput label="From" type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.currentTarget.value)} />
-          <TextInput label="To" type="date" value={draftTo} onChange={(e) => setDraftTo(e.currentTarget.value)} />
+          <TextInput label="Boshlanish" type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.currentTarget.value)} />
+          <TextInput label="Tugash" type="date" value={draftTo} onChange={(e) => setDraftTo(e.currentTarget.value)} />
           <Button color="parfum" loading={isFetching} onClick={() => setRange({ from: draftFrom, to: draftTo })}>
-            Apply
+            Qo‘llash
           </Button>
         </Group>
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-        <Kpi label="Gross revenue" value={data ? formatPrice(data.kpis.grossRevenueKrw) : '-'} />
-        <Kpi label="Delivered revenue" value={data ? formatPrice(data.kpis.deliveredRevenueKrw) : '-'} />
-        <Kpi label="Pending amount" value={data ? formatPrice(data.kpis.pendingOrderAmountKrw) : '-'} />
-        <Kpi label="Average order" value={data ? formatPrice(data.kpis.averageOrderValueKrw) : '-'} hint={data ? `${data.kpis.totalOrders} orders` : undefined} />
+        <Kpi label="Umumiy daromad" value={data ? formatPrice(data.kpis.grossRevenueKrw) : '-'} />
+        <Kpi label="Yetkazilgan daromad" value={data ? formatPrice(data.kpis.deliveredRevenueKrw) : '-'} />
+        <Kpi label="Kutilayotgan summa" value={data ? formatPrice(data.kpis.pendingOrderAmountKrw) : '-'} />
+        <Kpi label="O‘rtacha buyurtma" value={data ? formatPrice(data.kpis.averageOrderValueKrw) : '-'} hint={data ? `${data.kpis.totalOrders} ta buyurtma` : undefined} />
       </SimpleGrid>
 
       <Paper withBorder radius="md" p="md">
-        <Title order={4}>Daily Revenue</Title>
+        <Title order={4}>Kunlik daromad</Title>
         <Table striped highlightOnHover mt="sm">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Date</Table.Th>
-              <Table.Th>Orders</Table.Th>
-              <Table.Th>Cancelled</Table.Th>
-              <Table.Th ta="right">Revenue</Table.Th>
+              <Table.Th>Sana</Table.Th>
+              <Table.Th>Buyurtmalar</Table.Th>
+              <Table.Th>Bekor qilingan</Table.Th>
+              <Table.Th ta="right">Daromad</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -79,19 +80,19 @@ export function FinancePage() {
 
       <SimpleGrid cols={{ base: 1, md: 2 }}>
         <Paper withBorder radius="md" p="md">
-          <Title order={4}>By Status</Title>
+          <Title order={4}>Holatlar bo‘yicha</Title>
           <Table striped mt="sm">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Orders</Table.Th>
-                <Table.Th ta="right">Amount</Table.Th>
+                <Table.Th>Holati</Table.Th>
+                <Table.Th>Buyurtmalar</Table.Th>
+                <Table.Th ta="right">Summa</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {(data?.byStatus ?? []).map((row) => (
                 <Table.Tr key={row.status}>
-                  <Table.Td>{row.status}</Table.Td>
+                  <Table.Td>{ORDER_STATUS_LABEL[row.status]}</Table.Td>
                   <Table.Td>{row.count}</Table.Td>
                   <Table.Td ta="right">{formatPrice(row.amountKrw)}</Table.Td>
                 </Table.Tr>
@@ -101,13 +102,13 @@ export function FinancePage() {
         </Paper>
 
         <Paper withBorder radius="md" p="md">
-          <Title order={4}>Top Products</Title>
+          <Title order={4}>Eng ko‘p sotilgan mahsulotlar</Title>
           <Table striped mt="sm">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Product</Table.Th>
-                <Table.Th>Qty</Table.Th>
-                <Table.Th ta="right">Revenue</Table.Th>
+                <Table.Th>Mahsulot</Table.Th>
+                <Table.Th>Miqdor</Table.Th>
+                <Table.Th ta="right">Daromad</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -124,13 +125,13 @@ export function FinancePage() {
       </SimpleGrid>
 
       <Paper withBorder radius="md" p="md">
-        <Title order={4}>Top Categories</Title>
+        <Title order={4}>Eng ko‘p sotilgan bo‘limlar</Title>
         <Table striped mt="sm">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Category</Table.Th>
-              <Table.Th>Qty</Table.Th>
-              <Table.Th ta="right">Revenue</Table.Th>
+              <Table.Th>Bo‘lim</Table.Th>
+              <Table.Th>Miqdor</Table.Th>
+              <Table.Th ta="right">Daromad</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../../../app/hooks';
-import { useGetMyNotificationsQuery } from '../../../app/parfumApi';
+import { useGetMarketBrandingQuery, useGetMyNotificationsQuery } from '../../../app/parfumApi';
 
 import './app-top-bar.css';
 
@@ -10,17 +10,21 @@ export function AppTopBar() {
     { page: 1, pageSize: 1 },
     { skip: !token, pollingInterval: 30000 },
   );
+  const { data: branding } = useGetMarketBrandingQuery();
   const unread = notifications?.unreadCount ?? 0;
+  const marketName = branding?.marketName || 'Ansor Market';
+  const marketSlogan = branding?.marketSlogan || 'Koreadagi halal mahsulotlar';
+  const marketLogoUrl = branding?.marketLogoUrl || null;
 
   return (
     <header className="tma-top-bar">
-      <Link to="/" className="tma-top-bar__brand" aria-label="Ansor Market">
+      <Link to="/" className="tma-top-bar__brand" aria-label={marketName}>
         <span className="tma-top-bar__logo" aria-hidden>
-          A
+          {marketLogoUrl ? <img src={marketLogoUrl} alt="" /> : marketName.trim().charAt(0).toUpperCase() || 'A'}
         </span>
         <span className="tma-top-bar__brand-copy">
-          <strong>Ansor Market</strong>
-          <span>Koreadagi halal mahsulotlar</span>
+          <strong>{marketName}</strong>
+          <span>{marketSlogan}</span>
         </span>
       </Link>
       <div className="tma-top-bar__actions">
