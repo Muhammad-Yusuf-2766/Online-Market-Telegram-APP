@@ -1,9 +1,9 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from './store';
 import { setCredentials, setProfile } from '../features/auth/authSlice';
+import { getParfumApiBaseUrl } from './apiBase';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3000';
+const API_BASE_URL = getParfumApiBaseUrl();
 
 export type Paginated<T> = {
   items: T[];
@@ -130,6 +130,8 @@ export type MarketBranding = {
   marketName: string;
   marketSlogan: string;
   marketLogoUrl: string | null;
+  deliveryPriceKrw: number;
+  freeDeliveryThresholdKrw: number;
 };
 
 export type ProductFeedbackStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -175,6 +177,7 @@ export type AdminOrder = {
   status: OrderStatus;
   subtotalKrw: number;
   discountKrw: number;
+  deliveryFeeKrw: number;
   totalKrw: number;
   addressNameSnapshot: string | null;
   roadAddressSnapshot: string | null;

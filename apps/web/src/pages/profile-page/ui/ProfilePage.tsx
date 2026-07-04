@@ -1,8 +1,13 @@
 import { Button, Input, Select, Spinner } from '@telegram-apps/telegram-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
+  useDeleteUserAddressMutation,
+  useGetUserAddressesQuery,
   usePatchMeMutation,
+  useUpdateUserAddressMutation,
+  type UserAddress,
   type UserGender,
   type UserProfile,
 } from '../../../app/parfumApi';
@@ -20,6 +25,114 @@ import {
 function toDateInputValue(iso: string | null | undefined): string {
   if (!iso) return '';
   return iso.slice(0, 10);
+}
+
+function displayAddress(address: UserAddress): string {
+  return [
+    address.roadAddressName || address.addressName || address.jibunAddressName,
+    address.detailAddress,
+  ]
+    .filter(Boolean)
+    .join(', ');
+}
+
+function ProfileAddresses() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { data: addresses = [], isLoading } = useGetUserAddressesQuery();
+  const [updateAddress, { isLoading: updating }] = useUpdateUserAddressMutation();
+  const [deleteAddress, { isLoading: deleting }] = useDeleteUserAddressMutation();
+  const isBusy = updating || deleting;
+
+  async function makeDefault(address: UserAddress) {
+    if (address.isDefault) return;
+    await updateAddress({ id: address.id, patch: { isDefault: true } }).unwrap();
+  }
+
+  async function removeAddress(address: UserAddress) {
+    if (!window.confirm(t('profile.addressDeleteConfirm'))) return;
+    await deleteAddress(address.id).unwrap();
+  }
+
+  return (
+    <section style={{ marginTop: 24 }}>
+      <h2 className="page-title" style={{ fontSize: 20, marginBottom: 10 }}>
+        {t('profile.addressesTitle')}
+      </h2>
+      {isLoading ? (
+        <div className="tma-page--centered" style={{ padding: 12 }}>
+          <Spinner size="m" />
+        </div>
+      ) : addresses.length > 0 ? (
+        <div className="checkout-location-search-results" style={{ marginBottom: 12 }}>
+          {addresses.map((address) => (
+            <div
+              key={address.id}
+              className="checkout-location-search-results__item"
+              style={{ textAlign: 'left' }}
+            >
+              <strong>
+                {address.label || displayAddress(address)}
+                {address.isDefault ? (
+                  <span
+                    style={{
+                      marginLeft: 8,
+                      padding: '2px 7px',
+                      borderRadius: 999,
+                      fontSize: 11,
+                      color: 'var(--tg-theme-button-text-color, #fff)',
+                      background: 'var(--tg-theme-button-color, #2481cc)',
+                    }}
+                  >
+                    {t('profile.addressDefaultBadge')}
+                  </span>
+                ) : null}
+              </strong>
+              <span>{displayAddress(address)}</span>
+              {address.zoneNo ? <span>{address.zoneNo}</span> : null}
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <Button
+                  mode="bezeled"
+                  size="s"
+                  disabled={isBusy || address.isDefault}
+                  onClick={() => void makeDefault(address).catch(() => undefined)}
+                >
+                  {t('profile.makeDefaultAddress')}
+                </Button>
+                <Button
+                  mode="bezeled"
+                  size="s"
+                  disabled={isBusy}
+                  onClick={() => void removeAddress(address).catch(() => undefined)}
+                >
+                  {t('profile.deleteAddress')}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="page-placeholder" style={{ marginBottom: 12 }}>
+          {t('profile.addressesEmpty')}
+        </p>
+      )}
+      <Button
+        mode="bezeled"
+        size="m"
+        stretched
+        disabled={addresses.length >= 3}
+        onClick={() =>
+          navigate('/checkout/address', {
+            state: { profileAddressMode: true, returnTo: '/profile' },
+          })
+        }
+      >
+        {addresses.length >= 3
+          ? t('profile.addressLimitReached')
+          : t('profile.addAddress')}
+      </Button>
+    </section>
+  );
 }
 
 function ProfileEditor({ me }: { me: UserProfile }) {
@@ -130,6 +243,7 @@ function ProfileEditor({ me }: { me: UserProfile }) {
           })}
         </p>
       ) : null}
+      <ProfileAddresses />
       <p
         className="page-placeholder"
         style={{ marginTop: 16, fontSize: '0.75rem', opacity: 0.7 }}

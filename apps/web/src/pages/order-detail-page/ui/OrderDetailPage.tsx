@@ -19,13 +19,32 @@ function formatWhen(iso: string, locale: string): string {
 
 const ORDER_DETAIL_POLL_MS = 5000;
 
-function openShippingMaps(lat: number, lng: number): void {
-  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+function buildKakaoMapSearchUrl(addressText: string): string {
+  return `https://m.map.kakao.com/scheme/search?q=${encodeURIComponent(addressText)}`;
+}
+
+function openShippingMaps(addressText: string): void {
+  const url = buildKakaoMapSearchUrl(addressText);
   if (openLink.isAvailable()) {
     openLink(url);
     return;
   }
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function mapSearchAddressText(order: {
+  roadAddressSnapshot: string | null;
+  jibunAddressSnapshot: string | null;
+  addressNameSnapshot: string;
+  buildingNameSnapshot: string | null;
+}): string {
+  return (
+    order.roadAddressSnapshot?.trim() ||
+    order.jibunAddressSnapshot?.trim() ||
+    order.addressNameSnapshot?.trim() ||
+    order.buildingNameSnapshot?.trim() ||
+    ''
+  );
 }
 
 export function OrderDetailPage() {
@@ -79,6 +98,8 @@ export function OrderDetailPage() {
     );
   }
 
+  const mapAddressText = mapSearchAddressText(order);
+
   return (
     <div className="tma-page">
       <p className="page-placeholder" style={{ marginBottom: 4 }}>
@@ -119,12 +140,10 @@ export function OrderDetailPage() {
               .filter(Boolean)
               .join(', ')}
           </p>
-          {order.latitudeSnapshot != null &&
-          order.longitudeSnapshot != null ? (
-            <ShippingCoordsBlock
-              lat={order.latitudeSnapshot}
-              lng={order.longitudeSnapshot}
-              coordsLabel={t('orderDetail.shippingCoords')}
+          {order.addressNameSnapshot ? (
+            <ShippingMapSearchBlock
+              addressText={mapAddressText}
+              missingLabel={t('orderDetail.addressNotFound')}
               mapLabel={t('orderDetail.openShippingOnMap')}
             />
           ) : null}
@@ -155,6 +174,20 @@ export function OrderDetailPage() {
             </li>
           ))}
         </ul>
+      </SectionBlock>
+      <SectionBlock title={t('orderDetail.summary')}>
+        <p style={{ margin: '0 0 6px' }}>
+          {t('orderDetail.productsTotal')}: {formatPrice(order.subtotalKrw)}
+        </p>
+        <p style={{ margin: '0 0 6px' }}>
+          {t('orderDetail.deliveryFee')}:{' '}
+          {(order.deliveryFeeKrw ?? 0) === 0
+            ? t('orderDetail.freeDelivery')
+            : formatPrice(order.deliveryFeeKrw)}
+        </p>
+        <p style={{ margin: 0, fontWeight: 700 }}>
+          {t('orderDetail.totalPrice')}: {formatPrice(order.totalKrw)}
+        </p>
       </SectionBlock>
       {order.status === 'PENDING' ? (
         <Button
@@ -212,29 +245,28 @@ export function OrderDetailPage() {
   );
 }
 
-function ShippingCoordsBlock({
-  lat,
-  lng,
-  coordsLabel,
+function ShippingMapSearchBlock({
+  addressText,
+  missingLabel,
   mapLabel,
 }: {
-  lat: number;
-  lng: number;
-  coordsLabel: string;
+  addressText: string;
+  missingLabel: string;
   mapLabel: string;
 }) {
+  const query = addressText.trim();
   return (
     <>
-      <p style={{ margin: '0 0 8px', fontSize: 14 }}>
-        {coordsLabel}:{' '}
-        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {lat.toFixed(5)}, {lng.toFixed(5)}
-        </span>
-      </p>
+      {!query ? (
+        <p className="page-placeholder" style={{ margin: '0 0 8px' }}>
+          {missingLabel}
+        </p>
+      ) : null}
       <Button
         mode="bezeled"
         size="s"
-        onClick={() => openShippingMaps(lat, lng)}
+        disabled={!query}
+        onClick={() => openShippingMaps(query)}
       >
         {mapLabel}
       </Button>

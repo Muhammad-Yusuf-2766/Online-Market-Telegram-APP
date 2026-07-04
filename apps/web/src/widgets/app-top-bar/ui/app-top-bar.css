@@ -1,99 +1,100 @@
 .tma-top-bar {
-  position: sticky;
-  top: 0;
-  z-index: 400;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  padding-left: max(12px, env(safe-area-inset-left, 0px));
-  padding-right: max(12px, env(safe-area-inset-right, 0px));
-  background: var(--pb-surface);
-  border-bottom: 1px solid var(--pb-border);
+	--tma-brand-logo-size: 50px;
+	position: sticky;
+	top: 0;
+	z-index: 400;
+	flex-shrink: 0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	padding-left: max(12px, env(safe-area-inset-left, 0px));
+	padding-right: max(12px, env(safe-area-inset-right, 0px));
+	background: var(--pb-surface);
+	border-bottom: 1px solid var(--pb-border);
 }
 
 .tma-top-bar__brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--pb-text);
-  text-decoration: none;
-  min-width: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	color: var(--pb-text);
+	text-decoration: none;
+	min-width: 0;
 }
 
 .tma-top-bar__logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--pb-accent, #d4a853);
-  color: #fff;
-  font-weight: 800;
-  flex-shrink: 0;
-  overflow: hidden;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--tma-brand-logo-size);
+	height: var(--tma-brand-logo-size);
+	border-radius: 50%;
+	background: var(--pb-accent, #d4a853);
+	color: #fff;
+	font-weight: 800;
+	flex-shrink: 0;
+	overflow: hidden;
 }
 
 .tma-top-bar__logo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
 }
 
 .tma-top-bar__brand-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  line-height: 1.15;
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	line-height: 1.15;
 }
 
 .tma-top-bar__brand-copy strong {
-  font-size: 16px;
-  font-weight: 800;
+	font-size: 16px;
+	font-weight: 800;
 }
 
 .tma-top-bar__brand-copy span {
-  color: var(--pb-text-muted);
-  font-size: 12px;
-  font-weight: 500;
+	color: var(--pb-text-muted);
+	font-size: 12px;
+	font-weight: 500;
 }
 
 .tma-top-bar__actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
 }
 
 .tma-top-bar__icon-btn {
-  position: relative;
-  display: inline-flex;
-  width: 36px;
-  height: 36px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: var(--pb-text);
-  background: var(--pb-surface-2, #f4f4f5);
-  text-decoration: none;
+	position: relative;
+	display: inline-flex;
+	width: 36px;
+	height: 36px;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	color: var(--pb-text);
+	background: var(--pb-surface-2, #f4f4f5);
+	text-decoration: none;
 }
 
 .tma-top-bar__badge-dot {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: var(--pb-danger, #b42318);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 18px;
-  text-align: center;
+	position: absolute;
+	top: -4px;
+	right: -4px;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: var(--pb-danger, #b42318);
+	color: #fff;
+	font-size: 10px;
+	font-weight: 800;
+	line-height: 18px;
+	text-align: center;
 }

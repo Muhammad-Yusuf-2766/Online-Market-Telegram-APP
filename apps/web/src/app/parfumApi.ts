@@ -139,6 +139,7 @@ export type Order = {
   userId: string;
   status: OrderStatus;
   subtotalKrw: number;
+  deliveryFeeKrw: number;
   totalKrw: number;
   discountKrw: number;
   deliveryPhone: string | null;
@@ -220,6 +221,8 @@ export type MarketBranding = {
   marketName: string;
   marketSlogan: string;
   marketLogoUrl: string | null;
+  deliveryPriceKrw: number;
+  freeDeliveryThresholdKrw: number;
 };
 
 export type UserNotification = {
@@ -229,6 +232,7 @@ export type UserNotification = {
   body: string;
   imageUrl: string | null;
   targetUrl: string | null;
+  metadata?: Record<string, unknown> | null;
   readAt: string | null;
   createdAt: string;
 };

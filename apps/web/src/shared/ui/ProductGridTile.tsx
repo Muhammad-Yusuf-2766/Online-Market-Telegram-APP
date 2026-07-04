@@ -4,13 +4,14 @@ import type { Product } from '../../app/parfumApi';
 import { WishlistHeartButton } from '../../features/wishlist/WishlistHeartButton';
 import { resolveProductDiscount } from '../lib/productDiscount';
 import { formatPrice } from '../lib/money';
+import { resolveMediaUrlOrFallback } from '../lib/media';
 import { ProductRatingInline } from './ProductRatingInline';
 
 function productImageUrl(id: string, images: string[] | undefined): string {
-  if (images?.length) {
-    return images[0];
-  }
-  return `https://picsum.photos/seed/pb-${id}/400/400`;
+  return resolveMediaUrlOrFallback(
+    images?.[0],
+    `https://picsum.photos/seed/ansor-${id}/400/400`,
+  );
 }
 
 export function ProductGridTile({ product }: { product: Product }) {

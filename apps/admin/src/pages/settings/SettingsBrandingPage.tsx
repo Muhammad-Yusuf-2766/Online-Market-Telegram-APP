@@ -2,6 +2,7 @@ import {
   Button,
   FileInput,
   Group,
+  NumberInput,
   Paper,
   Stack,
   Text,
@@ -17,6 +18,7 @@ import {
   useUpdateMarketBrandingMutation,
   useUploadBrandingLogoMutation,
 } from '../../app/parfumApi';
+import { resolveMediaUrl } from '../../shared/lib/media';
 
 export function SettingsBrandingPage() {
   const { t } = useTranslation();
@@ -26,12 +28,16 @@ export function SettingsBrandingPage() {
   const [marketName, setMarketName] = useState('Ansor Market');
   const [marketSlogan, setMarketSlogan] = useState('Koreadagi halal mahsulotlar');
   const [marketLogoUrl, setMarketLogoUrl] = useState('');
+  const [deliveryPriceKrw, setDeliveryPriceKrw] = useState(0);
+  const [freeDeliveryThresholdKrw, setFreeDeliveryThresholdKrw] = useState(0);
 
   useEffect(() => {
     if (!data) return;
     setMarketName(data.marketName);
     setMarketSlogan(data.marketSlogan);
     setMarketLogoUrl(data.marketLogoUrl ?? '');
+    setDeliveryPriceKrw(data.deliveryPriceKrw ?? 0);
+    setFreeDeliveryThresholdKrw(data.freeDeliveryThresholdKrw ?? 0);
   }, [data]);
 
   async function submit() {
@@ -40,6 +46,8 @@ export function SettingsBrandingPage() {
         marketName,
         marketSlogan,
         marketLogoUrl: marketLogoUrl.trim() || null,
+        deliveryPriceKrw,
+        freeDeliveryThresholdKrw,
       }).unwrap();
       notifications.show({ color: 'green', message: t('branding.saved') });
     } catch {
@@ -96,6 +104,32 @@ export function SettingsBrandingPage() {
             disabled={uploading}
             onChange={(file) => void upload(file)}
           />
+          <NumberInput
+            label={t('branding.deliveryPrice')}
+            value={deliveryPriceKrw}
+            min={0}
+            step={500}
+            thousandSeparator=" "
+            suffix=" ₩"
+            disabled={isLoading}
+            onChange={(value) =>
+              setDeliveryPriceKrw(typeof value === 'number' && Number.isFinite(value) ? value : 0)
+            }
+          />
+          <NumberInput
+            label={t('branding.freeDeliveryThreshold')}
+            value={freeDeliveryThresholdKrw}
+            min={0}
+            step={1000}
+            thousandSeparator=" "
+            suffix=" ₩"
+            disabled={isLoading}
+            onChange={(value) =>
+              setFreeDeliveryThresholdKrw(
+                typeof value === 'number' && Number.isFinite(value) ? value : 0,
+              )
+            }
+          />
           {marketLogoUrl ? (
             <Group gap="sm">
               <div
@@ -112,7 +146,7 @@ export function SettingsBrandingPage() {
                 }}
               >
                 <img
-                  src={marketLogoUrl}
+                  src={resolveMediaUrl(marketLogoUrl) ?? marketLogoUrl}
                   alt=""
                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                 />

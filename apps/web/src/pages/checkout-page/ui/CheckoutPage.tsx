@@ -7,6 +7,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   useClearCartRemoteMutation,
   useCreateOrderMutation,
+  useGetMarketBrandingQuery,
+  useGetUserAddressesQuery,
+  type UserAddress,
   type UserProfile,
 } from '../../../app/parfumApi';
 import { useParfumMeQuery } from '../../../app/useParfumMeQuery';
@@ -157,6 +160,20 @@ function addressLabel(address: CheckoutAddressSelection): string {
     .join(', ');
 }
 
+function selectionFromSavedAddress(address: UserAddress): CheckoutAddressSelection {
+  return {
+    addressId: address.id,
+    addressName: address.addressName,
+    roadAddressName: address.roadAddressName,
+    jibunAddressName: address.jibunAddressName,
+    buildingName: address.buildingName,
+    zoneNo: address.zoneNo,
+    detailAddress: address.detailAddress,
+    latitude: address.latitude,
+    longitude: address.longitude,
+  };
+}
+
 function CheckoutForm({
   me,
   cartItems,
@@ -181,6 +198,8 @@ function CheckoutForm({
   const [createOrder, { isLoading: submitting, error }] =
     useCreateOrderMutation();
   const [clearCartRemote] = useClearCartRemoteMutation();
+  const { data: deliverySettings } = useGetMarketBrandingQuery();
+  const { data: savedAddresses } = useGetUserAddressesQuery();
 
   useEffect(() => {
     trackEvent('CHECKOUT_START');
@@ -204,10 +223,27 @@ function CheckoutForm({
     }
   }, [location.pathname, location.state, navigate]);
 
+  useEffect(() => {
+    const state = (location.state ?? {}) as CheckoutLocationState;
+    if (state.checkoutAddressSelection) return;
+    if (selectedAddress || !savedAddresses?.length) return;
+    const defaultAddress = savedAddresses.find((address) => address.isDefault);
+    if (defaultAddress) {
+      setSelectedAddress(selectionFromSavedAddress(defaultAddress));
+    }
+  }, [location.state, savedAddresses, selectedAddress]);
+
   const subtotal = cartItems.reduce(
     (sum, line) => sum + line.unitPriceKrw * line.quantity,
     0,
   );
+  const deliveryPrice = deliverySettings?.deliveryPriceKrw ?? 0;
+  const freeThreshold = deliverySettings?.freeDeliveryThresholdKrw ?? 0;
+  const deliveryFee =
+    freeThreshold > 0 && subtotal >= freeThreshold ? 0 : deliveryPrice;
+  const total = subtotal + deliveryFee;
+  const freeDeliveryRemaining =
+    freeThreshold > 0 && subtotal < freeThreshold ? freeThreshold - subtotal : 0;
   const placeOrderDisabled = submitting || !selectedAddress;
 
   return (
@@ -293,6 +329,29 @@ function CheckoutForm({
             {errorMessage(error, t)}
           </p>
         ) : null}
+        <div style={{ marginTop: 18 }}>
+          <div className="cart-subtotal">
+            <span>{t('checkout.productsTotal')}</span>
+            <strong>{formatPrice(subtotal)}</strong>
+          </div>
+          <div className="cart-subtotal">
+            <span>{t('checkout.deliveryPrice')}</span>
+            <strong>
+              {deliveryFee === 0 ? t('checkout.freeDelivery') : formatPrice(deliveryFee)}
+            </strong>
+          </div>
+          {freeDeliveryRemaining > 0 ? (
+            <p className="page-placeholder" style={{ margin: '0 0 12px' }}>
+              {t('checkout.freeDeliveryRemaining', {
+                amount: formatPrice(freeDeliveryRemaining),
+              })}
+            </p>
+          ) : null}
+          <div className="cart-subtotal">
+            <span>{t('checkout.totalPrice')}</span>
+            <strong>{formatPrice(total)}</strong>
+          </div>
+        </div>
       </div>
       <div className="checkout-page__sticky-cta">
         <Button
@@ -315,7 +374,7 @@ function CheckoutForm({
                   setShippingUiError(t('checkout.shippingRequired'));
                   return;
                 }
-                trackEvent('CHECKOUT_SUBMIT', { properties: { subtotal } });
+                trackEvent('CHECKOUT_SUBMIT', { properties: { subtotal, deliveryFee, total } });
                 const res = await createOrder({
                   items: cartItems.map((line) => ({
                     productId: line.productId,
@@ -347,7 +406,7 @@ function CheckoutForm({
             })();
           }}
         >
-          {t('checkout.placeOrder')} · {formatPrice(subtotal)}
+          {t('checkout.placeOrder')} · {formatPrice(total)}
         </Button>
       </div>
     </div>

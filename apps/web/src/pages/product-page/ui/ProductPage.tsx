@@ -12,11 +12,15 @@ import { useAppDispatch } from '../../../app/hooks';
 import { addOrMergeLine } from '../../../features/cart/cartSlice';
 import { resolveProductDiscount } from '../../../shared/lib/productDiscount';
 import { formatPrice } from '../../../shared/lib/money';
+import { resolveMediaUrlOrFallback } from '../../../shared/lib/media';
 import { ProductRatingInline } from '../../../shared/ui/ProductRatingInline';
 import { trackEvent } from '../../../shared/lib/analytics';
 
 function productImageUrl(id: string, images: string[]): string {
-  return images[0] ?? `https://picsum.photos/seed/ansor-${id}/800/800`;
+  return resolveMediaUrlOrFallback(
+    images[0],
+    `https://picsum.photos/seed/ansor-${id}/800/800`,
+  );
 }
 
 export function ProductPage() {
@@ -160,7 +164,7 @@ export function ProductPage() {
               title: product.title,
               unitLabel,
               unitPriceKrw: product.priceKrw,
-              imageUrl: product.images[0] ?? null,
+              imageUrl: productImageUrl(product.id, product.images),
               quantity: 1,
             }),
           );

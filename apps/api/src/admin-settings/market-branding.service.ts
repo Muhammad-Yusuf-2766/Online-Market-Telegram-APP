@@ -6,12 +6,16 @@ export type MarketBrandingDto = {
   marketName: string;
   marketSlogan: string;
   marketLogoUrl: string | null;
+  deliveryPriceKrw: number;
+  freeDeliveryThresholdKrw: number;
 };
 
 const DEFAULT_BRANDING: MarketBrandingDto = {
   marketName: "Ansor Market",
   marketSlogan: "Koreadagi halal mahsulotlar",
   marketLogoUrl: null,
+  deliveryPriceKrw: 0,
+  freeDeliveryThresholdKrw: 0,
 };
 
 @Injectable()
@@ -27,6 +31,8 @@ export class MarketBrandingService {
       marketName: row.marketName || DEFAULT_BRANDING.marketName,
       marketSlogan: row.marketSlogan || DEFAULT_BRANDING.marketSlogan,
       marketLogoUrl: row.marketLogoUrl || null,
+      deliveryPriceKrw: row.deliveryPriceKrw,
+      freeDeliveryThresholdKrw: row.freeDeliveryThresholdKrw,
     };
   }
 
@@ -41,6 +47,12 @@ export class MarketBrandingService {
       ...(dto.marketLogoUrl !== undefined
         ? { marketLogoUrl: dto.marketLogoUrl?.trim() || null }
         : {}),
+      ...(dto.deliveryPriceKrw !== undefined
+        ? { deliveryPriceKrw: Math.max(0, dto.deliveryPriceKrw) }
+        : {}),
+      ...(dto.freeDeliveryThresholdKrw !== undefined
+        ? { freeDeliveryThresholdKrw: Math.max(0, dto.freeDeliveryThresholdKrw) }
+        : {}),
     };
 
     const row = await this.prisma.marketBranding.upsert({
@@ -53,6 +65,8 @@ export class MarketBrandingService {
       marketName: row.marketName,
       marketSlogan: row.marketSlogan,
       marketLogoUrl: row.marketLogoUrl,
+      deliveryPriceKrw: row.deliveryPriceKrw,
+      freeDeliveryThresholdKrw: row.freeDeliveryThresholdKrw,
     };
   }
 }

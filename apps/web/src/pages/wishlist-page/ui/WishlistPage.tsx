@@ -7,6 +7,7 @@ import {
 } from '../../../app/parfumApi';
 import { Switch } from '../../../shared/ui/Switch';
 import { formatPrice } from '../../../shared/lib/money';
+import { resolveMediaUrlOrFallback } from '../../../shared/lib/media';
 
 export function WishlistPage() {
   const { t } = useTranslation();
@@ -38,10 +39,10 @@ export function WishlistPage() {
           <li key={item.id} className="cart-line">
             <Link to={`/product/${item.product.id}`} className="cart-line__media">
               <img
-                src={
-                  item.product.images?.[0] ??
-                  `https://picsum.photos/seed/pb-${item.product.id}/400/400`
-                }
+                src={resolveMediaUrlOrFallback(
+                  item.product.images?.[0],
+                  `https://picsum.photos/seed/ansor-${item.product.id}/400/400`,
+                )}
                 alt=""
               />
             </Link>

@@ -1,10 +1,7 @@
-/**
- * Map deep links for delivery coordinates (WGS84).
- * Yandex uses longitude,latitude order in `pt` / `ll`.
- */
+/** Map deep links for delivery coordinates (WGS84). */
 
-export function buildGoogleMapsSearchUrl(latitude: number, longitude: number): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${latitude},${longitude}`)}`;
+export function buildKakaoMapsSearchUrl(addressText: string): string {
+  return `https://m.map.kakao.com/scheme/search?q=${encodeURIComponent(addressText)}`;
 }
 
 /** Yandex Maps with a point marker; `pt` is lon,lat */

@@ -37,6 +37,67 @@ Brand:
 - Visible Parfumbox branding must be removed
 - Visible perfume-specific terminology must be removed
 
+## 2026-07-02 Added Feature Requirements
+
+### Delivery Settings
+
+Admin must be able to configure delivery pricing from market settings:
+
+- `deliveryPriceKrw` — normal delivery price in KRW
+- `freeDeliveryThresholdKrw` — product subtotal threshold at which delivery becomes free
+
+Backend requirements:
+
+- store delivery settings in the existing market settings/branding table unless a future settings split is needed
+- validate both values as non-negative integers
+- calculate delivery fee server-side during order creation
+- persist `Order.deliveryFeeKrw`
+- persist `Order.totalKrw` as product subtotal plus delivery fee
+- never trust frontend-only delivery calculations
+
+Telegram Mini App requirements:
+
+- cart and checkout show:
+  - `Mahsulotlar jami`
+  - `Yetkazib berish`
+  - `Umumiy narx`
+- show `Bepul` when delivery fee is zero
+- when a threshold is configured and not reached, optionally show remaining amount needed for free delivery
+
+### Profile Addresses and Default Address
+
+Telegram Mini App profile must show a `Manzillar` section:
+
+- list saved addresses
+- allow adding a new saved address through the existing backend Kakao search flow
+- allow marking one address as default
+- show the default badge as `Asosiy`
+- enforce only one default address per user
+- checkout should auto-select the default address when one exists
+- existing max 3 saved addresses rule remains
+
+### KakaoMap Order Links
+
+Telegram Mini App order detail map opening must use KakaoMap:
+
+- do not use Google Maps links in active order detail UI
+- always search by address text, even when latitude/longitude exist
+- prefer road address, then jibun/full address, then building name
+- do not include room/detail address in the KakaoMap search query
+- use `https://m.map.kakao.com/scheme/search?q={encodedAddress}`
+- do not use coordinate-only KakaoMap links
+- keep the Uzbek UI text `Nuqtani xaritada ochish`
+
+### Local Upload Cleanup
+
+When a product is deleted from admin:
+
+- delete local uploaded product image files from the API uploads folder
+- do not delete external `http://` or `https://` images
+- only delete files safely resolved inside the project uploads directory
+- ignore missing files and log non-fatal delete failures
+- when product images are replaced on update, clean up removed local uploaded images when safe
+
 ## Critical Workflow for Codex
 
 Before doing major implementation, always read:

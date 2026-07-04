@@ -1,6 +1,6 @@
 # Ansor Market Implementation Plan
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 ## Current Baseline
 
@@ -59,7 +59,41 @@ The main refactor should preserve these patterns and remove only the perfume/rew
   - Telegram sale/bestseller section titles were shortened and “view all” links removed
   - Telegram banner taps now open a larger image preview modal
   - `corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false`, API/web/admin builds, and API unit tests passed
-- Next: apply the new Prisma migration to the active dev database, manually QA branding/uploads/banner preview, and restore the dedicated e2e Postgres database on port 5433 or repoint the e2e environment deliberately before running `corepack pnpm --filter api test:e2e`.
+- 2026-07-01: Telegram home/search/media/notification polish completed:
+  - Telegram home “Barcha mahsulotlar” header now reads `Turkumlar`
+  - removed the home and search sort/select UI while preserving category filtering and search
+  - search now shows category chips below the input
+  - added shared media URL resolvers in web/admin so `/uploads/...` and old `localhost/uploads/...` values resolve through `VITE_API_BASE_URL`
+  - backend local upload responses now store relative `/uploads/...` when no public API URL is configured
+  - order-status user notification cards now render Uzbek previews, including existing rows with Russian stored title/body
+  - future order-status user notifications are created in Uzbek regardless of user locale
+  - `corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false`, API/web/admin builds, and API unit tests passed
+- 2026-07-01: Telegram home category placement and logo sizing polish completed:
+  - moved Telegram home category chips from directly under banner to after sale and bestseller sections
+  - the product grid now follows the relocated `Turkumlar` category section without a duplicate title
+  - increased Telegram Mini App header logo from 34px to 40px through `--tma-brand-logo-size`
+  - increased admin header logo from 40px to 46px through `ADMIN_HEADER_LOGO_SIZE`
+  - `corepack pnpm --filter web build` and `corepack pnpm --filter admin build` passed
+- 2026-07-02: Delivery settings, default addresses, and KakaoMap feature checkpoint completed:
+  - extended existing `MarketBranding` settings with `deliveryPriceKrw` and `freeDeliveryThresholdKrw`
+  - added `Order.deliveryFeeKrw` and a Prisma migration
+  - order creation now calculates delivery fee server-side from settings and persists delivery-inclusive `totalKrw`
+  - admin Settings -> Market brendi can edit delivery settings with non-negative WON inputs
+  - Telegram cart/checkout show products total, delivery, total, free delivery, and remaining threshold copy
+  - Telegram checkout auto-selects the saved default address
+  - Telegram profile now lists addresses, allows setting `Asosiy`, deleting addresses, and adding addresses through the Kakao-backed picker
+  - order detail map opening now uses KakaoMap coordinate/search links instead of Google Maps
+  - Prisma validate, API/web/admin builds, lockfile install check, and API unit tests passed
+- 2026-07-02: KakaoMap address search and local upload cleanup bugfix completed:
+  - order detail now opens KakaoMap mobile search URLs by address text only
+  - address query priority is road address, then jibun address, then full address, then building name
+  - detail address stays visible but is excluded from the KakaoMap query
+  - coordinate-only KakaoMap links and Google Maps links were removed from active source
+  - `StorageService` can safely resolve and delete local uploaded files only under the API uploads root
+  - product delete removes local uploaded product images after DB delete
+  - product image update removes replaced local uploaded images
+  - API/web/admin builds, lockfile install check, and API unit tests passed
+- Next: apply pending migrations to the active dev database, restart the stack, manually QA KakaoMap address search on a phone/Telegram viewport, product local upload delete/update cleanup, delivery totals/default-address/profile flows, then restore the dedicated e2e Postgres database on port 5433 or repoint the e2e environment deliberately before running `corepack pnpm --filter api test:e2e`.
 
 ## Phase 1 - Backend Schema and APIs
 

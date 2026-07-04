@@ -1,4 +1,4 @@
-import { Select, Spinner } from '@telegram-apps/telegram-ui';
+import { Spinner } from '@telegram-apps/telegram-ui';
 import {
   type ReactNode,
   useCallback,
@@ -21,6 +21,7 @@ import {
 } from '../../../app/parfumApi';
 import { BannerCarousel } from '../../../widgets/banner-carousel/ui/BannerCarousel';
 import { formatPrice } from '../../../shared/lib/money';
+import { resolveMediaUrlOrFallback } from '../../../shared/lib/media';
 import { resolveProductDiscount } from '../../../shared/lib/productDiscount';
 import { ProductGridTile } from '../../../shared/ui/ProductGridTile';
 import { trackEvent } from '../../../shared/lib/analytics';
@@ -30,7 +31,10 @@ const PAGE_SIZE = 20;
 const SECTION_PAGE_SIZE = 10;
 
 function productImageUrl(id: string, images: string[] | undefined): string {
-  return images?.[0] ?? `https://picsum.photos/seed/ansor-${id}/400/400`;
+  return resolveMediaUrlOrFallback(
+    images?.[0],
+    `https://picsum.photos/seed/ansor-${id}/400/400`,
+  );
 }
 
 function ProductRowCard({ product }: { product: Product }) {
@@ -176,30 +180,17 @@ function CatalogGrid({
 
   if (isError) {
     return (
-      <>
-        <div className="home-grid-head">
-          <h2 className="home-section__title">{t('catalog.allProducts')}</h2>
-        </div>
-        <div className="tma-page">
-          <h2 className="page-title">{t('catalog.loadErrorTitle')}</h2>
-          <p className="page-placeholder">
-            {t('catalog.loadError', { url: getParfumApiBaseUrl() })}
-          </p>
-        </div>
-      </>
+      <div className="tma-page">
+        <h2 className="page-title">{t('catalog.loadErrorTitle')}</h2>
+        <p className="page-placeholder">
+          {t('catalog.loadError', { url: getParfumApiBaseUrl() })}
+        </p>
+      </div>
     );
   }
 
   return (
     <>
-      <div className="home-grid-head">
-        <h2 className="home-section__title">{t('catalog.allProducts')}</h2>
-        {total ? (
-          <span className="home-grid-head__count">
-            {t('catalog.totalCount', { count: total })}
-          </span>
-        ) : null}
-      </div>
       {showInitialLoader ? (
         <div className="home-grid">
           <div className="explore-grid">
@@ -239,7 +230,7 @@ function CatalogGrid({
 export function CatalogPage() {
   const { t } = useTranslation();
   const [categorySlug, setCategorySlug] = useState('');
-  const [sort, setSort] = useState<ProductListSort>('newest');
+  const sort: ProductListSort = 'newest';
   const { data: categories } = useGetCategoriesQuery();
   const { data: banners } = useGetBannersQuery();
   const { data: saleRow1, isLoading: saleLoading1 } = useGetSaleProductsQuery({
@@ -269,8 +260,19 @@ export function CatalogPage() {
     <div className="home-page">
       {hasBanner ? <BannerCarousel banners={banners ?? []} /> : null}
 
-      {(!hasBanner || categories?.length) ? (
-        <>
+      <ProductSection
+        title={t('catalog.saleProducts')}
+        rows={[saleRow1?.items ?? [], saleRow2?.items ?? []]}
+        loading={saleLoading1 || saleLoading2}
+      />
+      <ProductSection
+        title={t('catalog.bestsellerProducts')}
+        rows={[bestsellerRow1?.items ?? [], bestsellerRow2?.items ?? []]}
+        loading={bestsellerLoading1 || bestsellerLoading2}
+      />
+
+      {categories?.length ? (
+        <section className="home-section">
           <div className="home-section__head">
             <h2 className="home-section__title">
               {t('catalog.filterCategoriesTitle')}
@@ -284,7 +286,7 @@ export function CatalogPage() {
             <CategoryChip current={categorySlug} value="" onSelect={setCategorySlug}>
               {t('catalog.filterAllCategories')}
             </CategoryChip>
-            {(categories ?? []).map((category) => (
+            {categories.map((category) => (
               <CategoryChip
                 key={category.id}
                 current={categorySlug}
@@ -297,19 +299,8 @@ export function CatalogPage() {
               </CategoryChip>
             ))}
           </div>
-        </>
+        </section>
       ) : null}
-
-      <ProductSection
-        title={t('catalog.saleProducts')}
-        rows={[saleRow1?.items ?? [], saleRow2?.items ?? []]}
-        loading={saleLoading1 || saleLoading2}
-      />
-      <ProductSection
-        title={t('catalog.bestsellerProducts')}
-        rows={[bestsellerRow1?.items ?? [], bestsellerRow2?.items ?? []]}
-        loading={bestsellerLoading1 || bestsellerLoading2}
-      />
 
       {activeCategory ? (
         <div className="home-active-filters">
@@ -326,23 +317,6 @@ export function CatalogPage() {
           </button>
         </div>
       ) : null}
-
-      <div className="home-grid-head" style={{ marginTop: 8 }}>
-        <Select
-          id="catalog-sort"
-          header={t('search.sortLabel')}
-          value={sort}
-          onChange={(e) => setSort(e.target.value as ProductListSort)}
-        >
-          <option value="newest">{t('search.sortNewest')}</option>
-          <option value="price_asc">{t('search.sortPriceAsc')}</option>
-          <option value="price_desc">{t('search.sortPriceDesc')}</option>
-          <option value="title_asc">{t('search.sortTitleAsc')}</option>
-          <option value="title_desc">{t('search.sortTitleDesc')}</option>
-          <option value="rating_desc">{t('search.sortRatingDesc')}</option>
-          <option value="rating_asc">{t('search.sortRatingAsc')}</option>
-        </Select>
-      </div>
 
       <CatalogGrid key={`${categorySlug}:${sort}`} categorySlug={categorySlug} sort={sort} />
     </div>

@@ -1,6 +1,6 @@
 # Ansor Market TODO
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 ## Immediate Rule
 
@@ -116,7 +116,7 @@ Last updated: 2026-07-01
 - [x] Disable order button until address is valid.
 - [x] Remove coins/promo checkout UI unless explicitly reapproved.
 - [x] Update order list/detail status display including `PREPARING`.
-- [ ] Update notification page if payload shape changes.
+- [x] Update notification page if payload shape changes.
 - [x] Run `pnpm --filter web build`.
 
 ## Phase 3 - Admin Panel
@@ -257,6 +257,121 @@ pnpm --filter admin build
 - [ ] Manually verify Telegram banner preview modal on mobile viewport.
 - [ ] Run `corepack pnpm --filter api test:e2e` if the dedicated test database is available.
 
+## 2026-07-01 Home/Search UI, Media URLs, and Notification Cards
+
+- [x] Change Telegram home `Barcha mahsulotlar` header to `Turkumlar`.
+- [x] Remove the home sort/filter select at that spot.
+- [x] Remove the search sort/select UI.
+- [x] Keep search input behavior.
+- [x] Add category chips below the search input.
+- [x] Add web media URL resolver for `/uploads/...` and old local upload URLs.
+- [x] Use web media resolver for product, banner, branding, cart, wishlist, and notification images.
+- [x] Add admin media URL resolver for `/uploads/...` and old local upload URLs.
+- [x] Use admin media resolver for branding and banner links/previews.
+- [x] Stop backend local upload fallback from storing `http://localhost:3000`.
+- [x] Resolve Telegram bot local upload image URLs through `API_PUBLIC_URL`/`PUBLIC_API_URL`.
+- [x] Force future user order-status notification rows to Uzbek title/body.
+- [x] Render existing order-status notification card previews in Uzbek from metadata/status.
+- [x] Update backend env example for optional `API_PUBLIC_URL`.
+- [x] Update web/admin env examples for `VITE_API_BASE_URL` phone/ngrok image rendering.
+- [x] Run `corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false`.
+- [x] Run `corepack pnpm --filter api build`.
+- [x] Run `corepack pnpm --filter web build`.
+- [x] Run `corepack pnpm --filter admin build`.
+- [x] Run `corepack pnpm --filter api test`.
+- [x] Run `corepack pnpm --filter web lint` and document existing lint failures.
+- [x] Run `corepack pnpm --filter admin lint` and document existing lint failures.
+- [ ] Manually verify Telegram home/search through phone/ngrok.
+- [ ] Manually verify admin-uploaded product image renders in Telegram Mini App through phone/ngrok.
+- [ ] Manually verify admin-uploaded banner image renders in Telegram Mini App through phone/ngrok.
+- [ ] Manually verify Uzbek notification card previews in Telegram Mini App.
+
+## 2026-07-01 Home Category Placement and Header Logo Size
+
+- [x] Remove Telegram home category section from directly below banner.
+- [x] Keep home order as banner, sale section, bestseller section, then categories.
+- [x] Move `Turkumlar` title and category chips to the old bottom product/category area.
+- [x] Keep category click filtering wired to existing product grid/list.
+- [x] Remove duplicate `Turkumlar` grid title.
+- [x] Increase Telegram Mini App header logo size.
+- [x] Increase admin header logo size.
+- [x] Keep logo images using `object-fit: contain`.
+- [x] Run `corepack pnpm --filter web build`.
+- [x] Run `corepack pnpm --filter admin build`.
+- [ ] Manually verify Telegram home layout order on phone/ngrok.
+- [ ] Manually verify category filtering after moved section.
+- [ ] Manually verify admin and Telegram logo sizes with real logo asset.
+
+## 2026-07-02 Delivery Settings, Default Addresses, and KakaoMap
+
+- [x] Add `deliveryPriceKrw` and `freeDeliveryThresholdKrw` to market settings.
+- [x] Add Prisma migration for delivery settings and order delivery fee.
+- [x] Add `deliveryFeeKrw` to `Order`.
+- [x] Validate admin delivery settings as non-negative integers.
+- [x] Calculate delivery fee server-side during order creation.
+- [x] Persist delivery-inclusive `totalKrw`.
+- [x] Seed default market settings row.
+- [x] Add admin Settings -> Market brendi numeric inputs:
+  - `Yetkazib berish narxi`
+  - `Bepul yetkazib berish chegarasi`
+- [x] Show delivery fee in admin order detail modal.
+- [x] Show product subtotal, delivery, and total in Telegram cart.
+- [x] Show product subtotal, delivery, and total in Telegram checkout.
+- [x] Show `Bepul` when delivery fee is zero.
+- [x] Show remaining amount needed for free delivery when threshold is not reached.
+- [x] Auto-select default saved address in checkout.
+- [x] Add profile saved-address list.
+- [x] Add Uzbek `Asosiy` badge for default address.
+- [x] Allow setting another saved address as default from profile.
+- [x] Allow deleting saved addresses from profile.
+- [x] Reuse Kakao-backed address picker for adding addresses from profile.
+- [x] Promote another address to default when deleting the current default address.
+- [x] Replace Telegram order detail Google Maps link with KakaoMap link.
+- [x] Use KakaoMap coordinate URL when latitude/longitude exist.
+- [x] Use KakaoMap search URL when only address text exists.
+- [x] Remove active Google Maps links from app/admin source.
+- [x] Run `corepack pnpm --filter api exec prisma validate`.
+- [x] Run `corepack pnpm --filter api build`.
+- [x] Run `corepack pnpm --filter web build`.
+- [x] Run `corepack pnpm --filter admin build`.
+- [x] Run `corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false`.
+- [x] Run `corepack pnpm --filter api test`.
+- [ ] Apply `20260702090000_delivery_settings_and_order_delivery_fee` to the active dev database.
+- [ ] Manually verify admin delivery settings save/load.
+- [ ] Manually verify Telegram cart/checkout delivery totals below and above threshold.
+- [ ] Manually verify created orders store `deliveryFeeKrw` and delivery-inclusive `totalKrw`.
+- [ ] Manually verify profile address add/default/delete flows on mobile.
+- [ ] Manually verify checkout default address auto-selection.
+- [ ] Manually verify order detail KakaoMap open behavior in Telegram/phone viewport.
+- [ ] Run `corepack pnpm --filter api test:e2e` if the dedicated test database is available.
+
+## 2026-07-02 KakaoMap Address Search and Local Upload Cleanup Bugfix
+
+- [x] Change Telegram order detail map URL to KakaoMap mobile search URL.
+- [x] Stop using KakaoMap coordinate link from order detail.
+- [x] Use road address as first KakaoMap search query source.
+- [x] Fall back to jibun/full address, then building name.
+- [x] Keep detail address visible in UI but exclude it from the KakaoMap search query.
+- [x] Disable map button and show Uzbek `Manzil topilmadi` if no searchable address exists.
+- [x] Remove active Google Maps and coordinate-only KakaoMap source matches.
+- [x] Add safe backend upload path resolver.
+- [x] Delete only files that resolve under API `uploads` directory.
+- [x] Ignore ordinary external `http://`/`https://` images.
+- [x] Reject path traversal and arbitrary absolute paths.
+- [x] Treat missing files as non-fatal.
+- [x] Log non-fatal file delete failures.
+- [x] Delete local uploaded product images when product is deleted.
+- [x] Delete replaced local uploaded product images when product images are updated.
+- [x] Run `corepack pnpm --filter api build`.
+- [x] Run `corepack pnpm --filter web build`.
+- [x] Run `corepack pnpm --filter admin build`.
+- [x] Run `corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false`.
+- [x] Run `corepack pnpm --filter api test`.
+- [ ] Manually verify KakaoMap address search on phone/Telegram viewport.
+- [ ] Manually verify admin product delete removes local uploaded product image file.
+- [ ] Manually verify product image replacement removes old local uploaded image file.
+- [ ] Optionally add banner local upload cleanup using the same helper.
+
 ## Documentation Maintenance
 
 At the end of each major task:
@@ -274,4 +389,4 @@ At the end of each major task:
 
 ## Next Exact Prompt To Run
 
-Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-07-01 Admin Branding, Local Image Uploads, and Banner Preview checkpoint. Do not restart from scratch. First apply the new Prisma migration to the active dev database, restart the local API/admin/web stack, and manually verify the admin branding settings, admin header branding layout, Telegram header branding, product image URL/upload flow with max 2 images, banner URL/upload/edit flow, Telegram sale/bestseller section titles without “Barchasi” links, and banner image preview modal. If the dedicated e2e database is available, run `corepack pnpm --filter api test:e2e`; otherwise document the blocker. Update the Ansor docs with files changed, build/test/manual QA status, known issues, and the next exact prompt.
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-07-02 KakaoMap Address Search and Local Upload Cleanup Bugfix checkpoint. Do not restart from scratch. Apply pending Prisma migrations, restart the stack, manually verify KakaoMap order-detail address search on a phone/Telegram viewport, verify admin product delete removes local uploaded product images while external images are untouched, verify product image replacement cleanup, then continue the pending delivery/default-address manual QA. If the e2e database is available, run `corepack pnpm --filter api test:e2e`. Update the Ansor docs with manual QA results, files changed, build/test status, known issues, and the next exact prompt.

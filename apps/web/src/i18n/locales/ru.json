@@ -187,6 +187,7 @@
     "delivery": "Доставка",
     "shippingCoords": "Координаты доставки",
     "openShippingOnMap": "Открыть точку на карте",
+    "addressNotFound": "Manzil topilmadi",
     "items": "Товары",
     "allOrders": "Все заказы",
     "paidCash": "Наличными",

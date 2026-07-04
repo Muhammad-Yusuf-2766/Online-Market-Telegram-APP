@@ -22,6 +22,7 @@ import {
   useUpdateBannerMutation,
   useUploadBannerImageMutation,
 } from '../app/parfumApi';
+import { resolveMediaUrl } from '../shared/lib/media';
 
 type BannerRow = {
   id: string;
@@ -160,7 +161,7 @@ export function BannersPage() {
           {(data ?? []).map((row) => (
             <Table.Tr key={row.id}>
               <Table.Td>
-                <a href={row.imageUrl} target="_blank" rel="noreferrer">
+                <a href={resolveMediaUrl(row.imageUrl) ?? row.imageUrl} target="_blank" rel="noreferrer">
                   {row.imageUrl.slice(0, 48)}…
                 </a>
               </Table.Td>

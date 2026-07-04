@@ -259,6 +259,7 @@ model Order {
   userId                String
   status                OrderStatus @default(PENDING)
   subtotalKrw           Int
+  deliveryFeeKrw        Int         @default(0)
   totalKrw              Int
   discountKrw           Int         @default(0)
   deliveryPhone         String?
@@ -314,12 +315,14 @@ model Banner {
 }
 
 model MarketBranding {
-  id            String   @id @default("default")
-  marketName    String   @default("Ansor Market")
-  marketSlogan  String   @default("Koreadagi halal mahsulotlar")
-  marketLogoUrl String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                       String   @id @default("default")
+  marketName               String   @default("Ansor Market")
+  marketSlogan             String   @default("Koreadagi halal mahsulotlar")
+  marketLogoUrl            String?
+  deliveryPriceKrw         Int      @default(0)
+  freeDeliveryThresholdKrw Int      @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 }
 
 model UserNotification {

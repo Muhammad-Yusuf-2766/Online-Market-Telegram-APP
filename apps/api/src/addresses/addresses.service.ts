@@ -151,8 +151,21 @@ export class AddressesService {
   }
 
   async deleteForUser(userId: string, id: string) {
-    await this.assertOwner(userId, id);
-    await this.prisma.userAddress.delete({ where: { id } });
+    const row = await this.assertOwner(userId, id);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userAddress.delete({ where: { id } });
+      if (!row.isDefault) return;
+      const next = await tx.userAddress.findFirst({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+      });
+      if (next) {
+        await tx.userAddress.update({
+          where: { id: next.id },
+          data: { isDefault: true },
+        });
+      }
+    });
     return { ok: true as const };
   }
 
@@ -164,6 +177,7 @@ export class AddressesService {
     if (row.userId !== userId) {
       throw new ForbiddenException();
     }
+    return row;
   }
 
   private addressData(dto: Partial<CreateUserAddressDto>) {

@@ -3,8 +3,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { BadRequestException, Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { constants } from "node:fs";
+import { access, mkdir, rm, writeFile } from "node:fs/promises";
+import { extname, isAbsolute, join, normalize, relative, resolve } from "node:path";
+import { Logger } from "@nestjs/common";
 
 export type LocalImageUpload = {
   originalname: string;
@@ -15,6 +17,7 @@ export type LocalImageUpload = {
 
 @Injectable()
 export class StorageService {
+  private readonly logger = new Logger(StorageService.name);
   private client: S3Client | null = null;
   private readonly bucket: string;
   private readonly publicBase: string;
@@ -75,7 +78,45 @@ export class StorageService {
     await mkdir(uploadDir, { recursive: true });
     await writeFile(join(uploadDir, filename), file.buffer);
 
-    return { url: `${this.localPublicBase()}/uploads/${folder}/${filename}` };
+    const publicBase = this.localPublicBase();
+    return { url: `${publicBase}/uploads/${folder}/${filename}` };
+  }
+
+  async deleteUploadedFileIfExists(value: string | null | undefined): Promise<void> {
+    const filePath = this.resolveUploadFilePath(value);
+    if (!filePath) return;
+
+    try {
+      await access(filePath, constants.F_OK);
+    } catch {
+      return;
+    }
+
+    try {
+      await rm(filePath, { force: true });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to delete local upload ${filePath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  resolveUploadFilePath(value: string | null | undefined): string | null {
+    const raw = value?.trim();
+    if (!raw) return null;
+
+    const relativeUploadPath = this.relativeUploadPath(raw);
+    if (!relativeUploadPath) return null;
+
+    const uploadsRoot = this.uploadsRoot();
+    const target = resolve(uploadsRoot, relativeUploadPath);
+    const rel = relative(uploadsRoot, target);
+    if (!rel || rel.startsWith("..") || isAbsolute(rel)) {
+      return null;
+    }
+    return target;
   }
 
   private getOrCreateClient(accessKey: string, secretKey: string): S3Client {
@@ -129,8 +170,65 @@ export class StorageService {
   private localPublicBase(): string {
     const configured =
       this.config.get<string>("API_PUBLIC_URL") ??
-      this.config.get<string>("PUBLIC_API_URL") ??
-      `http://localhost:${this.config.get<string>("PORT") ?? "3000"}`;
-    return configured.replace(/\/$/, "");
+      this.config.get<string>("PUBLIC_API_URL");
+    return configured?.trim().replace(/\/$/, "") ?? "";
+  }
+
+  private uploadsRoot(): string {
+    return resolve(__dirname, "..", "..", "uploads");
+  }
+
+  private relativeUploadPath(value: string): string | null {
+    const urlPath = this.localUploadPathFromUrl(value);
+    const rawPath = urlPath ?? value;
+    const normalizedInput = rawPath.replace(/\\/g, "/").replace(/^\/+/, "");
+    if (!normalizedInput.startsWith("uploads/")) return null;
+
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(normalizedInput);
+    } catch {
+      return null;
+    }
+    const withoutRoot = decoded.slice("uploads/".length);
+    if (!withoutRoot || withoutRoot.includes("\0")) return null;
+
+    const normalized = normalize(withoutRoot);
+    if (normalized.startsWith("..") || isAbsolute(normalized)) {
+      return null;
+    }
+    return normalized;
+  }
+
+  private localUploadPathFromUrl(value: string): string | null {
+    if (!/^https?:\/\//i.test(value)) return null;
+
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      return null;
+    }
+    if (!url.pathname.startsWith("/uploads/")) return null;
+    if (!this.isKnownLocalUploadOrigin(url)) return null;
+    return url.pathname;
+  }
+
+  private isKnownLocalUploadOrigin(url: URL): boolean {
+    const configuredOrigins = [
+      this.config.get<string>("API_PUBLIC_URL"),
+      this.config.get<string>("PUBLIC_API_URL"),
+    ]
+      .map((raw) => {
+        try {
+          return raw ? new URL(raw).origin : null;
+        } catch {
+          return null;
+        }
+      })
+      .filter((origin): origin is string => Boolean(origin));
+
+    if (configuredOrigins.includes(url.origin)) return true;
+    return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname);
   }
 }

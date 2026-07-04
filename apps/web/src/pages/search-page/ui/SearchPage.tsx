@@ -1,30 +1,44 @@
-import { Input, Select, Spinner } from '@telegram-apps/telegram-ui';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Input, Spinner } from '@telegram-apps/telegram-ui';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import type { Product, ProductListSort } from '../../../app/parfumApi';
-import { getParfumApiBaseUrl, useGetProductsQuery } from '../../../app/parfumApi';
+import type { Product } from '../../../app/parfumApi';
+import {
+  getParfumApiBaseUrl,
+  useGetCategoriesQuery,
+  useGetProductsQuery,
+} from '../../../app/parfumApi';
+import { resolveMediaUrlOrFallback } from '../../../shared/lib/media';
 import { formatPrice } from '../../../shared/lib/money';
 import { ProductRatingInline } from '../../../shared/ui/ProductRatingInline';
 import { trackEvent } from '../../../shared/lib/analytics';
+import '../../catalog-page/ui/catalog-page.css';
 
 const PAGE_SIZE = 20;
 
 function productImageUrl(id: string, images: string[] | undefined): string {
-  if (images?.length) {
-    return images[0];
-  }
-  return `https://picsum.photos/seed/pb-${id}/400/400`;
+  return resolveMediaUrlOrFallback(
+    images?.[0],
+    `https://picsum.photos/seed/ansor-${id}/400/400`,
+  );
 }
 
 export function SearchPage() {
   const { t } = useTranslation();
   const [qInput, setQInput] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
-  const [sort, setSort] = useState<ProductListSort>('newest');
+  const [categorySlug, setCategorySlug] = useState('');
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<Product[]>([]);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const { data: categories } = useGetCategoriesQuery();
 
   useEffect(() => {
     const tmr = window.setTimeout(() => setDebouncedQ(qInput.trim()), 300);
@@ -34,7 +48,7 @@ export function SearchPage() {
   useEffect(() => {
     setPage(1);
     setItems([]);
-  }, [debouncedQ, sort]);
+  }, [debouncedQ, categorySlug]);
 
   useEffect(() => {
     if (!debouncedQ) return;
@@ -45,7 +59,7 @@ export function SearchPage() {
     page,
     pageSize: PAGE_SIZE,
     q: debouncedQ || undefined,
-    sort,
+    categorySlug: categorySlug || undefined,
   });
 
   useLayoutEffect(() => {
@@ -101,21 +115,37 @@ export function SearchPage() {
           onChange={(e) => setQInput(e.target.value)}
           autoComplete="off"
         />
-        <Select
-          id="search-sort"
-          header={t('search.sortLabel')}
-          value={sort}
-          onChange={(e) => setSort(e.target.value as ProductListSort)}
-        >
-          <option value="newest">{t('search.sortNewest')}</option>
-          <option value="price_asc">{t('search.sortPriceAsc')}</option>
-          <option value="price_desc">{t('search.sortPriceDesc')}</option>
-          <option value="title_asc">{t('search.sortTitleAsc')}</option>
-          <option value="title_desc">{t('search.sortTitleDesc')}</option>
-          <option value="rating_desc">{t('search.sortRatingDesc')}</option>
-          <option value="rating_asc">{t('search.sortRatingAsc')}</option>
-        </Select>
       </div>
+
+      {categories?.length ? (
+        <>
+          <div className="home-section__head" style={{ padding: 0 }}>
+            <h2 className="home-section__title">{t('catalog.filterCategoriesTitle')}</h2>
+          </div>
+          <div
+            className="home-chip-row"
+            style={{ padding: '0 0 4px' }}
+            role="tablist"
+            aria-label={t('catalog.filterCategoriesTitle')}
+          >
+            <CategoryChip current={categorySlug} value="" onSelect={setCategorySlug}>
+              {t('catalog.filterAllCategories')}
+            </CategoryChip>
+            {categories.map((category) => (
+              <CategoryChip
+                key={category.id}
+                current={categorySlug}
+                value={category.slug}
+                onSelect={(value) =>
+                  setCategorySlug((prev) => (prev === value ? '' : value))
+                }
+              >
+                {category.name}
+              </CategoryChip>
+            ))}
+          </div>
+        </>
+      ) : null}
 
       {showInitialLoader ? (
         <div className="tma-page tma-page--centered" style={{ padding: 32 }}>
@@ -171,5 +201,30 @@ export function SearchPage() {
         </>
       )}
     </div>
+  );
+}
+
+function CategoryChip({
+  current,
+  value,
+  onSelect,
+  children,
+}: {
+  current: string;
+  value: string;
+  onSelect: (value: string) => void;
+  children: ReactNode;
+}) {
+  const isActive = current === value;
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={isActive}
+      className={`home-chip${isActive ? ' home-chip--active' : ''}`}
+      onClick={() => onSelect(value)}
+    >
+      {children}
+    </button>
   );
 }

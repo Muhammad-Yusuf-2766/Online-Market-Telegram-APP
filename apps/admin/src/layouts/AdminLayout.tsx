@@ -19,6 +19,10 @@ import {
 import { NotificationsBell } from '../features/notifications/NotificationsBell';
 import { useAdminOrdersRealtime } from '../features/orders/useAdminOrdersRealtime';
 import { useGetMarketBrandingQuery } from '../app/parfumApi';
+import { resolveMediaUrl } from '../shared/lib/media';
+
+const ADMIN_HEADER_LOGO_SIZE = 46;
+
 export function AdminLayout() {
   useAdminOrdersRealtime();
   const { t } = useTranslation();
@@ -28,7 +32,7 @@ export function AdminLayout() {
   const isMobile = useMediaQuery('(max-width: 47.99em)');
   const marketName = branding?.marketName || 'Ansor Market';
   const marketSlogan = branding?.marketSlogan || 'Koreadagi halal mahsulotlar';
-  const marketLogoUrl = branding?.marketLogoUrl || null;
+  const marketLogoUrl = resolveMediaUrl(branding?.marketLogoUrl);
 
   const navSections = useMemo(
     () => filterNavSections(getAdminNavSections(t)),
@@ -52,8 +56,8 @@ export function AdminLayout() {
             <Group gap="sm" wrap="nowrap" visibleFrom="sm" style={{ minWidth: 0 }}>
               <div
                 style={{
-                  width: 40,
-                  height: 40,
+                  width: ADMIN_HEADER_LOGO_SIZE,
+                  height: ADMIN_HEADER_LOGO_SIZE,
                   borderRadius: 10,
                   overflow: 'hidden',
                   background: 'var(--mantine-color-parfum-1)',

@@ -43,6 +43,11 @@ type AddressSnapshot = {
   longitudeSnapshot: number | null;
 };
 
+type DeliverySettings = {
+  deliveryPriceKrw: number;
+  freeDeliveryThresholdKrw: number;
+};
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -75,6 +80,13 @@ export class OrdersService {
       }
 
       const address = await this.resolveAddressSnapshot(tx, userId, dto);
+      const deliverySettings = await this.loadDeliverySettings(tx);
+      const deliveryFeeKrw =
+        deliverySettings.freeDeliveryThresholdKrw > 0 &&
+        subtotalKrw >= deliverySettings.freeDeliveryThresholdKrw
+          ? 0
+          : deliverySettings.deliveryPriceKrw;
+      const totalKrw = subtotalKrw + deliveryFeeKrw;
 
       if (dto.deliveryPhone || dto.deliveryFirstName || dto.deliveryLastName) {
         await tx.user.update({
@@ -105,7 +117,8 @@ export class OrdersService {
         data: {
           userId,
           subtotalKrw,
-          totalKrw: subtotalKrw,
+          deliveryFeeKrw,
+          totalKrw,
           discountKrw: 0,
           deliveryPhone: dto.deliveryPhone ?? null,
           deliveryFirstName: dto.deliveryFirstName ?? null,
@@ -336,14 +349,8 @@ export class OrdersService {
       .create({
         userId: updated.userId,
         kind: "ORDER_STATUS",
-        title:
-          prev.user.locale === "ru"
-            ? `Заказ #${updated.id.slice(-6)}`
-            : `Buyurtma #${updated.id.slice(-6)}`,
-        body:
-          prev.user.locale === "ru"
-            ? `Статус: ${updated.status}`
-            : `Holat: ${updated.status}`,
+        title: `Buyurtma #${updated.id.slice(-6)}`,
+        body: `Holat: ${this.uzbekStatusLabel(updated.status)}`,
         targetUrl: `/orders/${updated.id}`,
         metadata: { orderId: updated.id, status: updated.status },
       })
@@ -415,6 +422,17 @@ export class OrdersService {
     };
   }
 
+  private async loadDeliverySettings(tx: Prisma.TransactionClient): Promise<DeliverySettings> {
+    const row = await tx.marketBranding.findUnique({
+      where: { id: "default" },
+      select: { deliveryPriceKrw: true, freeDeliveryThresholdKrw: true },
+    });
+    return {
+      deliveryPriceKrw: Math.max(0, row?.deliveryPriceKrw ?? 0),
+      freeDeliveryThresholdKrw: Math.max(0, row?.freeDeliveryThresholdKrw ?? 0),
+    };
+  }
+
   private async emitStockChanges(items: OrderItem[]) {
     const productIds = [...new Set(items.map((item) => item.productId).filter((id): id is string => Boolean(id)))];
     if (productIds.length === 0) return;
@@ -427,5 +445,17 @@ export class OrdersService {
         stockQuantity: row.stockQuantity,
       });
     }
+  }
+
+  private uzbekStatusLabel(status: OrderStatus): string {
+    const labels: Record<OrderStatus, string> = {
+      PENDING: "Kutilmoqda",
+      CONFIRMED: "Tasdiqlangan",
+      PREPARING: "Tayyorlanmoqda",
+      SHIPPED: "Yo‘lda",
+      DELIVERED: "Yetkazilgan",
+      CANCELLED: "Bekor qilingan",
+    };
+    return labels[status] ?? status;
   }
 }

@@ -3,6 +3,7 @@ import { Prisma, type Product } from "@prisma/client";
 import { paginationParams, toPaginatedResult, type PaginatedResult } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import { OrderEventsService } from "../realtime/order-events.service";
+import { StorageService } from "../storage/storage.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { ProductListQueryDto, ProductListSort } from "./dto/product-list-query.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
@@ -17,6 +18,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orderEvents: OrderEventsService,
+    private readonly storage: StorageService,
   ) {}
 
   private idsCsv(raw: string | undefined): string[] | undefined {
@@ -154,7 +156,7 @@ export class ProductsService {
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<PublicProduct> {
-    await this.findRaw(id);
+    const existing = await this.findRaw(id);
     this.assertImages(dto.images);
     const updated = await this.prisma.product.update({
       where: { id },
@@ -187,12 +189,16 @@ export class ProductsService {
         stockQuantity: updated.stockQuantity,
       });
     }
+    if (dto.images !== undefined) {
+      await this.deleteRemovedLocalImages(existing.images, dto.images);
+    }
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    await this.findRaw(id);
+    const product = await this.findRaw(id);
     await this.prisma.product.delete({ where: { id } });
+    await this.deleteLocalImages(product.images);
   }
 
   async findRaw(id: string): Promise<Product> {
@@ -206,6 +212,17 @@ export class ProductsService {
   private assertImages(images: string[] | undefined): void {
     if (images && images.length > 2) {
       throw new BadRequestException("Products can have at most 2 images");
+    }
+  }
+
+  private async deleteRemovedLocalImages(previous: string[], next: string[]): Promise<void> {
+    const retained = new Set(next);
+    await this.deleteLocalImages(previous.filter((image) => !retained.has(image)));
+  }
+
+  private async deleteLocalImages(images: string[]): Promise<void> {
+    for (const image of images) {
+      await this.storage.deleteUploadedFileIfExists(image);
     }
   }
 }

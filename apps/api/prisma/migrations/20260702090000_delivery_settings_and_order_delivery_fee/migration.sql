@@ -1,0 +1,6 @@
+ALTER TABLE "MarketBranding"
+  ADD COLUMN "deliveryPriceKrw" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN "freeDeliveryThresholdKrw" INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE "Order"
+  ADD COLUMN "deliveryFeeKrw" INTEGER NOT NULL DEFAULT 0;

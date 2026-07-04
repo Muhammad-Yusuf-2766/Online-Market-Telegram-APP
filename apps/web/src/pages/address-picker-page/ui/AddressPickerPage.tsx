@@ -17,6 +17,8 @@ import type {
 type AddressPickerLocationState = {
   checkoutAddressSelection?: CheckoutAddressSelection;
   checkoutFormDraft?: CheckoutFormDraft;
+  profileAddressMode?: boolean;
+  returnTo?: string;
 };
 
 function selectionFromSaved(address: UserAddress): CheckoutAddressSelection {
@@ -66,6 +68,8 @@ export function AddressPickerPage() {
     () => (location.state ?? {}) as AddressPickerLocationState,
     [location.state],
   );
+  const profileAddressMode = navState.profileAddressMode === true;
+  const returnTo = navState.returnTo || '/profile';
   const { data: savedAddresses, isLoading: savedLoading } =
     useGetUserAddressesQuery();
   const [searchAddresses, { data: results = [], isFetching, error }] =
@@ -77,6 +81,7 @@ export function AddressPickerPage() {
   );
   const [selected, setSelected] = useState<AddressSearchResult | null>(null);
   const [saveAddress, setSaveAddress] = useState(true);
+  const [makeDefault, setMakeDefault] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -88,7 +93,17 @@ export function AddressPickerPage() {
     return () => window.clearTimeout(timer);
   }, [query, searchAddresses]);
 
+  useEffect(() => {
+    if ((savedAddresses?.length ?? 0) >= 3 && !profileAddressMode) {
+      setSaveAddress(false);
+    }
+  }, [profileAddressMode, savedAddresses?.length]);
+
   function confirm(selection: CheckoutAddressSelection) {
+    if (profileAddressMode) {
+      navigate(returnTo, { replace: true });
+      return;
+    }
     navigate('/checkout', {
       replace: true,
       state: {
@@ -105,7 +120,7 @@ export function AddressPickerPage() {
     setUiError(null);
     const payload = selectionFromSearch(selected, detailAddress.trim());
     try {
-      if (saveAddress) {
+      if (saveAddress || profileAddressMode) {
         const saved = await createAddress({
           label: null,
           recipientName: null,
@@ -118,7 +133,7 @@ export function AddressPickerPage() {
           detailAddress: payload.detailAddress,
           latitude: payload.latitude ?? null,
           longitude: payload.longitude ?? null,
-          isDefault: false,
+          isDefault: profileAddressMode ? makeDefault : false,
         }).unwrap();
         confirm(selectionFromSaved(saved));
         return;
@@ -137,11 +152,11 @@ export function AddressPickerPage() {
           {t('addressPicker.hint')}
         </p>
 
-        {savedLoading ? (
+        {savedLoading && !profileAddressMode ? (
           <div className="tma-page--centered" style={{ padding: 12 }}>
             <Spinner size="m" />
           </div>
-        ) : (savedAddresses?.length ?? 0) > 0 ? (
+        ) : !profileAddressMode && (savedAddresses?.length ?? 0) > 0 ? (
           <div className="checkout-location-search-results" style={{ marginBottom: 14 }}>
             {savedAddresses?.map((address) => (
               <button
@@ -212,15 +227,26 @@ export function AddressPickerPage() {
               onChange={(e) => setDetailAddress(e.target.value)}
               autoComplete="street-address"
             />
-            <label className="page-placeholder" style={{ display: 'flex', gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={saveAddress}
-                disabled={(savedAddresses?.length ?? 0) >= 3}
-                onChange={(e) => setSaveAddress(e.target.checked)}
-              />
-              <span>{t('addressPicker.saveAddress')}</span>
-            </label>
+            {profileAddressMode ? (
+              <label className="page-placeholder" style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={makeDefault}
+                  onChange={(e) => setMakeDefault(e.target.checked)}
+                />
+                <span>{t('addressPicker.makeDefault')}</span>
+              </label>
+            ) : (
+              <label className="page-placeholder" style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={saveAddress}
+                  disabled={(savedAddresses?.length ?? 0) >= 3}
+                  onChange={(e) => setSaveAddress(e.target.checked)}
+                />
+                <span>{t('addressPicker.saveAddress')}</span>
+              </label>
+            )}
           </div>
         ) : null}
       </div>
@@ -234,7 +260,7 @@ export function AddressPickerPage() {
           disabled={!selected || !detailAddress.trim()}
           onClick={() => void confirmSearchResult()}
         >
-          {t('addressPicker.confirm')}
+          {profileAddressMode ? t('addressPicker.saveToProfile') : t('addressPicker.confirm')}
         </Button>
       </div>
     </div>

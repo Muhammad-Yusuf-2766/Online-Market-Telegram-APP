@@ -129,6 +129,8 @@
     "marketName": "Market nomi",
     "marketSlogan": "Market shiori",
     "marketLogoUrl": "Logotip URL",
+    "deliveryPrice": "Yetkazib berish narxi",
+    "freeDeliveryThreshold": "Bepul yetkazib berish chegarasi",
     "uploadLogo": "Logotip yuklash",
     "uploadLogoPlaceholder": "Rasm faylini tanlang",
     "logoPreview": "Joriy logotip",

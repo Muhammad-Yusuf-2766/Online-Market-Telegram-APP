@@ -25,6 +25,19 @@ async function main() {
   });
   console.log(`Seeded Super Admin user ${admin.email}.`);
 
+  await prisma.marketBranding.upsert({
+    where: { id: "default" },
+    create: {
+      id: "default",
+      marketName: "Ansor Market",
+      marketSlogan: "Koreadagi halal mahsulotlar",
+      deliveryPriceKrw: 0,
+      freeDeliveryThresholdKrw: 0,
+    },
+    update: {},
+  });
+  console.log("Seeded market settings.");
+
   const units = [
     { slug: "dona", name: "Dona", symbol: "dona", sortOrder: 10, allowDecimal: false },
     { slug: "kg", name: "Kilogram", symbol: "kg", sortOrder: 20, allowDecimal: true },

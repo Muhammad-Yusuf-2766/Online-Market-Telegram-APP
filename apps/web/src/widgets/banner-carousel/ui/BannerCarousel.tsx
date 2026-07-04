@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Banner } from '../../../app/parfumApi';
+import { resolveMediaUrl } from '../../../shared/lib/media';
 import './banner-carousel.css';
 
 export function BannerCarousel({ banners }: { banners: Banner[] }) {
@@ -10,18 +11,19 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
     <>
       <div className="banner-carousel" aria-label="Promotions">
         <div className="banner-carousel__track">
-          {banners.map((b) =>
-            b.imageUrl ? (
+          {banners.map((b) => {
+            const imageUrl = resolveMediaUrl(b.imageUrl);
+            return imageUrl ? (
               <button
                 key={b.id}
                 type="button"
                 className="banner-carousel__slide"
                 onClick={() => setPreview(b)}
               >
-                <img src={b.imageUrl} alt={b.title ?? ''} loading="lazy" />
+                <img src={imageUrl} alt={b.title ?? ''} loading="lazy" />
               </button>
-            ) : null,
-          )}
+            ) : null;
+          })}
         </div>
       </div>
       {preview ? (
@@ -41,7 +43,10 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
             >
               X
             </button>
-            <img src={preview.imageUrl} alt={preview.title ?? ''} />
+            <img
+              src={resolveMediaUrl(preview.imageUrl) ?? preview.imageUrl}
+              alt={preview.title ?? ''}
+            />
           </div>
         </div>
       ) : null}

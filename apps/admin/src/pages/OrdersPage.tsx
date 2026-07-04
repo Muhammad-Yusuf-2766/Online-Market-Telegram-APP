@@ -213,6 +213,7 @@ export function OrdersPage() {
 
             <Group justify="flex-end">
               <Text>Oraliq jami: {formatPrice(selectedOrder.subtotalKrw)}</Text>
+              <Text>Yetkazib berish: {formatPrice(selectedOrder.deliveryFeeKrw ?? 0)}</Text>
               <Text>Chegirma: {formatPrice(selectedOrder.discountKrw)}</Text>
               <Text fw={700}>Jami: {formatPrice(selectedOrder.totalKrw)}</Text>
             </Group>
