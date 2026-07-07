@@ -45,7 +45,7 @@ export class ProductsService {
     if (query.categorySlug?.trim()) {
       where.category = { slug: query.categorySlug.trim() };
     }
-    const categoryIds = this.idsCsv(query.categoryIds);
+    const categoryIds = this.idsCsv(query.categoryIds) ?? (query.categoryId?.trim() ? [query.categoryId.trim()] : undefined);
     if (categoryIds) {
       where.categoryId = { in: categoryIds };
     }

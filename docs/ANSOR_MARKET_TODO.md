@@ -372,6 +372,30 @@ pnpm --filter admin build
 - [ ] Manually verify product image replacement removes old local uploaded image file.
 - [ ] Optionally add banner local upload cleanup using the same helper.
 
+## 2026-07-04 Mini App Cards, Address Helper, Dark Inputs, Admin Search Bugfix
+
+- [x] Keep Telegram Mini App product grid card images at consistent square height.
+- [x] Keep Telegram Mini App home horizontal product card media square and non-shrinking.
+- [x] Add Uzbek KakaoMap helper text under the address search input.
+- [x] Improve Telegram Mini App input/search/textarea/select visibility for dark mode.
+- [x] Fix admin `Foydalanuvchilar` search `q` validation error.
+- [x] Inspect admin search pages with API-backed search.
+- [x] Fix admin `Buyurtmalar` search DTO/backend filtering for `q`.
+- [x] Fix admin `Mahsulotlar` category filter `categoryId` whitelist compatibility.
+- [x] Add admin Orders/Products visible error text for failed search/filter loads.
+- [x] Fix `pnpm-workspace.yaml` `allowBuilds` placeholders so builds can run.
+- [x] Run `pnpm --filter api build`.
+- [x] Run `pnpm --filter web build`.
+- [x] Run `pnpm --filter admin build`.
+- [x] Run `pnpm --filter web lint` and document existing failures.
+- [x] Run `pnpm --filter admin lint` and document existing failures.
+- [ ] Manually verify Mini App product cards in Telegram/phone viewport.
+- [ ] Manually verify dark mode input contrast in Telegram.
+- [ ] Manually verify KakaoMap helper text and address search flow on phone.
+- [ ] Manually verify admin Users search by Telegram/user fields.
+- [ ] Manually verify admin Orders search by order/user/address fields.
+- [ ] Manually verify admin Products search and category filter.
+
 ## Documentation Maintenance
 
 At the end of each major task:
@@ -389,4 +413,4 @@ At the end of each major task:
 
 ## Next Exact Prompt To Run
 
-Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-07-02 KakaoMap Address Search and Local Upload Cleanup Bugfix checkpoint. Do not restart from scratch. Apply pending Prisma migrations, restart the stack, manually verify KakaoMap order-detail address search on a phone/Telegram viewport, verify admin product delete removes local uploaded product images while external images are untouched, verify product image replacement cleanup, then continue the pending delivery/default-address manual QA. If the e2e database is available, run `corepack pnpm --filter api test:e2e`. Update the Ansor docs with manual QA results, files changed, build/test status, known issues, and the next exact prompt.
+Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Continue from the 2026-07-04 Mini App Cards, Address Helper, Dark Inputs, Admin Search Bugfix checkpoint. Do not restart from scratch. Start the local API/web/admin stack, manually verify Mini App product card image heights, dark mode input contrast, KakaoMap helper/address flow, and admin Users/Orders/Products search/filter behavior. Then continue pending 2026-07-02 upload cleanup and delivery/default-address manual QA. If lint must be green, schedule a separate focused pass for the existing React Hooks lint debt. Update the Ansor docs with manual QA results, files changed, build/test status, known issues, and the next exact prompt.

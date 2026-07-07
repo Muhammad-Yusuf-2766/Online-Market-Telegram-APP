@@ -108,6 +108,7 @@ export function SearchPage() {
       <div className="form-stack" style={{ marginBottom: 16 }}>
         <Input
           id="search-q"
+          className="tma-form-control"
           type="search"
           header={t('search.queryLabel')}
           placeholder={t('search.queryPlaceholder')}

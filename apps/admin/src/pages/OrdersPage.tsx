@@ -45,7 +45,7 @@ export function OrdersPage() {
   const debouncedQ = useDebouncedSearch(q);
   const [status, setStatus] = useState<OrderStatus | ''>('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data, isLoading, isFetching } = useGetOrdersQuery({
+  const { data, isLoading, isFetching, isError } = useGetOrdersQuery({
     page,
     pageSize: PAGE_SIZE,
     q: debouncedQ || undefined,
@@ -105,6 +105,8 @@ export function OrdersPage() {
       <Paper withBorder radius="md" p="md">
         {isLoading ? (
           <Text c="dimmed">Yuklanmoqda...</Text>
+        ) : isError ? (
+          <Text c="red">Buyurtmalarni yuklab bo‘lmadi. Qidiruv yoki filter qiymatini tekshirib qayta urinib ko‘ring.</Text>
         ) : (
           <>
             <Table striped highlightOnHover>

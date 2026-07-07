@@ -179,6 +179,7 @@ function ProfileEditor({ me }: { me: UserProfile }) {
       <div className="form-stack">
         <Input
           id="pf-phone"
+          className="tma-form-control"
           type="tel"
           inputMode="numeric"
           header={t('profile.phone')}
@@ -190,6 +191,7 @@ function ProfileEditor({ me }: { me: UserProfile }) {
         />
         <Input
           id="pf-first"
+          className="tma-form-control"
           header={t('profile.firstName')}
           placeholder={t('profile.firstName')}
           value={firstName}
@@ -198,6 +200,7 @@ function ProfileEditor({ me }: { me: UserProfile }) {
         />
         <Input
           id="pf-last"
+          className="tma-form-control"
           header={t('profile.lastName')}
           placeholder={t('profile.lastName')}
           value={lastName}
@@ -206,6 +209,7 @@ function ProfileEditor({ me }: { me: UserProfile }) {
         />
         <Input
           id="pf-birth"
+          className="tma-form-control"
           type="date"
           header={t('profile.birthday')}
           value={birthDate}
@@ -214,6 +218,7 @@ function ProfileEditor({ me }: { me: UserProfile }) {
         />
         <Select
           id="pf-gender"
+          className="tma-form-control"
           header={t('profile.gender')}
           value={gender}
           onChange={(e) => setGender(e.target.value as UserGender)}

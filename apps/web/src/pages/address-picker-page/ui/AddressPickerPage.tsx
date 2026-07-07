@@ -139,7 +139,7 @@ export function AddressPickerPage() {
         return;
       }
       confirm(payload);
-    } catch (e) {
+    } catch {
       setUiError(t('addressPicker.saveError'));
     }
   }
@@ -177,6 +177,7 @@ export function AddressPickerPage() {
 
         <Input
           id="co-address-search"
+          className="tma-form-control"
           header={t('addressPicker.search')}
           placeholder={t('addressPicker.searchPlaceholder')}
           value={query}
@@ -187,6 +188,9 @@ export function AddressPickerPage() {
           }}
           autoComplete="off"
         />
+        <p className="form-helper address-picker-page__helper">
+          {t('addressPicker.searchHelper')}
+        </p>
         {isFetching ? (
           <p className="page-placeholder address-picker-page__status">
             {t('addressPicker.searching')}
@@ -221,6 +225,7 @@ export function AddressPickerPage() {
           <div className="form-stack" style={{ marginTop: 14 }}>
             <Input
               id="co-address-detail"
+              className="tma-form-control"
               header={t('addressPicker.detailAddress')}
               placeholder={t('addressPicker.detailPlaceholder')}
               value={detailAddress}

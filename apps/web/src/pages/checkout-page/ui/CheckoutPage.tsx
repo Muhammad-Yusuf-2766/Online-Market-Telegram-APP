@@ -256,6 +256,7 @@ function CheckoutForm({
         <div className="form-stack">
           <Input
             id="co-phone"
+            className="tma-form-control"
             type="tel"
             inputMode="numeric"
             header={t('checkout.phone')}
@@ -276,6 +277,7 @@ function CheckoutForm({
           ) : null}
           <Input
             id="co-first"
+            className="tma-form-control"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder={t('checkout.firstName')}

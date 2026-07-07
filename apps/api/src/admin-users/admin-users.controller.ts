@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAdminGuard } from "../admin-auth/guards/jwt-admin.guard";
-import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
+import { SearchablePaginationQueryDto } from "../common/dto/searchable-pagination-query.dto";
 import type { PaginatedResult } from "../common/pagination";
 import {
   AdminUsersService,
@@ -19,11 +19,8 @@ export class AdminUsersController {
   @Get()
   @ApiOperation({ summary: "List Telegram users (admin, paginated, searchable)" })
   @ApiOkResponse({ description: "Paginated users" })
-  async list(
-    @Query() query: PaginationQueryDto,
-    @Query("q") q?: string,
-  ): Promise<PaginatedResult<AdminCustomerRow>> {
-    return this.adminUsers.findAllPaginated({ ...query, q });
+  async list(@Query() query: SearchablePaginationQueryDto): Promise<PaginatedResult<AdminCustomerRow>> {
+    return this.adminUsers.findAllPaginated(query);
   }
 
   @Get(":userId/details")

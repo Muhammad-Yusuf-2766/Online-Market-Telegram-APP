@@ -545,6 +545,15 @@ Fix before moving on:
 - dead routes and navigation links
 - broken Socket.IO invalidations
 
+2026-07-04 verification notes:
+
+- Admin search endpoints must whitelist `q` inside the DTO used by `@Query()` because the app uses a global `ValidationPipe` with `forbidNonWhitelisted: true`.
+- `admin/users` and `admin/settings/admin-users` use `SearchablePaginationQueryDto`.
+- `admin/orders` accepts `q` in `AdminOrdersQueryDto` and searches order, delivery, address, and related user fields.
+- `admin/products` accepts the existing admin frontend `categoryId` param in addition to public `categorySlug` and `categoryIds`.
+- Telegram Mini App product cards should keep square media via CSS, not per-image inline sizing.
+- Telegram Mini App dark-mode form control contrast is handled globally in `apps/web/src/index.css`.
+
 ## Suggested Phase Order
 
 1. Backend schema and API contracts first.

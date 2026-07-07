@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AdminAuthService } from "../admin-auth/admin-auth.service";
-import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
+import { SearchablePaginationQueryDto } from "../common/dto/searchable-pagination-query.dto";
 import { paginationParams, toPaginatedResult } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateAdminUserDto } from "./dto/create-admin-user.dto";
@@ -14,8 +14,9 @@ export class AdminUsersMgmtService {
     private readonly adminAuth: AdminAuthService,
   ) {}
 
-  async findAll(query: PaginationQueryDto, q?: string) {
+  async findAll(query: SearchablePaginationQueryDto) {
     const { page, pageSize, skip } = paginationParams(query);
+    const q = query.q?.trim();
     const where: Prisma.AdminUserWhereInput = q
       ? {
           OR: [

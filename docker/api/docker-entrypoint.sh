@@ -3,7 +3,7 @@ set -e
 cd /app/apps/api
 
 if [ -z "${DATABASE_URL:-}" ]; then
-  echo "ERROR: DATABASE_URL is not set. On Railway, add: DATABASE_URL=\${{Postgres.DATABASE_URL}}"
+  echo "ERROR: DATABASE_URL is not set"
   exit 1
 fi
 
@@ -21,5 +21,8 @@ until pnpm exec prisma migrate deploy; do
   sleep 2
 done
 
-pnpm exec prisma db seed || true
+if [ "${RUN_DB_SEED:-false}" = "true" ]; then
+  pnpm exec prisma db seed
+fi
+
 exec node dist/main.js

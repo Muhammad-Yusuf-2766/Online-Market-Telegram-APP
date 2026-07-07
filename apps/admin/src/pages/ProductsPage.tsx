@@ -100,7 +100,7 @@ export function ProductsPage() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
-  const { data, isLoading, isFetching } = useGetProductsQuery({
+  const { data, isLoading, isFetching, isError } = useGetProductsQuery({
     page: 1,
     pageSize: 100,
     q: debouncedQ || undefined,
@@ -218,6 +218,8 @@ export function ProductsPage() {
       <Paper withBorder radius="md" p="md">
         {isLoading ? (
           <Text c="dimmed">Yuklanmoqda...</Text>
+        ) : isError ? (
+          <Text c="red">Mahsulotlarni yuklab bo‘lmadi. Qidiruv yoki bo‘lim filterini tekshirib qayta urinib ko‘ring.</Text>
         ) : (
           <Table striped highlightOnHover>
             <Table.Thead>

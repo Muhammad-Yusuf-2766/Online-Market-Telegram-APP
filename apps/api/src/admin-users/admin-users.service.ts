@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Order, OrderItem, Prisma, Product, User, UserAddress, Wishlist } from "@prisma/client";
-import type { PaginationQueryDto } from "../common/dto/pagination-query.dto";
+import type { SearchablePaginationQueryDto } from "../common/dto/searchable-pagination-query.dto";
 import { paginationParams, toPaginatedResult, type PaginatedResult } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -52,9 +52,7 @@ export type AdminCustomerDetail = {
 export class AdminUsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllPaginated(
-    query: PaginationQueryDto & { q?: string },
-  ): Promise<PaginatedResult<AdminCustomerRow>> {
+  async findAllPaginated(query: SearchablePaginationQueryDto): Promise<PaginatedResult<AdminCustomerRow>> {
     const { page, pageSize, skip } = paginationParams(query);
     const terms = query.q?.trim().split(/\s+/).filter(Boolean) ?? [];
     const where: Prisma.UserWhereInput =

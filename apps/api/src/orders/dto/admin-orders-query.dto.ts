@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsDateString, IsEnum, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 import { OrderStatus } from "@prisma/client";
 
 export class AdminOrdersQueryDto {
@@ -19,6 +19,11 @@ export class AdminOrdersQueryDto {
   @IsOptional()
   @IsEnum(OrderStatus)
   status?: OrderStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  q?: string;
 
   /** Inclusive start (YYYY-MM-DD, UTC start of day). */
   @IsOptional()

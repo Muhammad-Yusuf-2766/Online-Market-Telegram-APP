@@ -47,6 +47,11 @@ export class ProductListQueryDto extends PaginationQueryDto {
   @IsString()
   categoryIds?: string;
 
+  @ApiPropertyOptional({ description: "Single category id" })
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
   @ApiPropertyOptional({ description: "Minimum KRW price" })
   @IsOptional()
   @Type(() => Number)

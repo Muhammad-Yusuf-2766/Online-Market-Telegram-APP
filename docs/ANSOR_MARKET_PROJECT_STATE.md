@@ -1935,6 +1935,88 @@ pnpm --filter api test:e2e
 4. Run API build/tests before changing frontend contracts.
 5. Then update web and admin RTK Query contracts and UI pages.
 
+## 2026-07-04 Mini App Cards, Address Helper, Dark Inputs, Admin Search Bugfix
+
+### Completed
+
+- Stabilized Telegram Mini App product card media sizing:
+  - grid cards now keep square media, hidden overflow, fixed media flex behavior, and consistent two-line title space
+  - home horizontal sale/bestseller cards keep square media and no width shrink
+- Added Uzbek KakaoMap helper copy below the address search input explaining that Korean addresses are searched through KakaoMap and giving examples.
+- Improved Telegram Mini App input/search/textarea/select contrast with global `tma-shell` form control styles and stronger placeholder/focus colors for dark mode.
+- Fixed admin Telegram users search root cause:
+  - `admin/users?q=...` used `PaginationQueryDto` plus a separate `@Query("q")`
+  - global `ValidationPipe` has `forbidNonWhitelisted: true`, so `q` was rejected before the controller handler ran
+  - added `SearchablePaginationQueryDto` and routed `q` through the validated DTO
+- Applied the same searchable DTO pattern to admin panel users.
+- Fixed admin orders search:
+  - `OrdersPage` sent `q`, but `AdminOrdersQueryDto` did not whitelist it
+  - backend now accepts `q` and searches order id, delivery phone/name/address, and related user Telegram/name/phone fields
+- Fixed admin products category filter compatibility:
+  - admin frontend sends `categoryId`
+  - backend `ProductListQueryDto` now whitelists `categoryId` and maps it into the existing category filter logic
+- Added visible admin error states for Products and Orders tables when search/filter loading fails.
+- Fixed pnpm workspace `allowBuilds` placeholders so dependency build scripts can run non-interactively.
+
+### Files Changed
+
+- `pnpm-workspace.yaml`
+- `apps/api/src/common/dto/searchable-pagination-query.dto.ts`
+- `apps/api/src/admin-users/admin-users.controller.ts`
+- `apps/api/src/admin-users/admin-users.service.ts`
+- `apps/api/src/admin-settings/admin-users-mgmt.controller.ts`
+- `apps/api/src/admin-settings/admin-users-mgmt.service.ts`
+- `apps/api/src/orders/dto/admin-orders-query.dto.ts`
+- `apps/api/src/orders/orders.service.ts`
+- `apps/api/src/products/dto/product-list-query.dto.ts`
+- `apps/api/src/products/products.service.ts`
+- `apps/admin/src/pages/OrdersPage.tsx`
+- `apps/admin/src/pages/ProductsPage.tsx`
+- `apps/web/src/pages/address-picker-page/ui/AddressPickerPage.tsx`
+- `apps/web/src/i18n/locales/uz.json`
+- `apps/web/src/i18n/locales/ru.json`
+- `apps/web/src/index.css`
+- `apps/web/src/pages/catalog-page/ui/catalog-page.css`
+- `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`
+- `docs/ANSOR_MARKET_PROJECT_STATE.md`
+- `docs/ANSOR_MARKET_TODO.md`
+
+### Build/Test Status
+
+Passed:
+
+```bash
+pnpm --filter api build
+pnpm --filter web build
+pnpm --filter admin build
+```
+
+Lint status:
+
+```bash
+pnpm --filter web lint
+pnpm --filter admin lint
+```
+
+Both lint commands currently fail on existing repo lint debt, mostly React Hooks `set-state-in-effect` / `refs` rules and a few unused underscore parameters. The task-specific unused catch variable in `AddressPickerPage` was removed.
+
+### Remaining Work
+
+- Manually verify product card image heights on a phone/Telegram viewport.
+- Manually verify address search helper copy and dark mode input contrast in Telegram.
+- Manually verify admin Users, Orders, and Products searches against the running API.
+- Clean existing web/admin lint debt in a separate focused pass if lint must become green.
+
+### Next Exact Steps
+
+1. Start API, web, and admin locally with the intended `.env` values.
+2. In admin, test:
+   - `Foydalanuvchilar` search by Telegram ID, username, first name, last name, and phone
+   - `Buyurtmalar` search by order id, customer, Telegram, phone, and address
+   - `Mahsulotlar` search by title and category filter
+3. In Telegram Mini App dark mode, verify search/address/profile/checkout inputs are readable.
+4. On phone/Telegram viewport, verify product image cards remain equal height in grid and horizontal sections.
+
 ## Next Suggested Codex Prompt
 
 Read `AGENTS.md`, `docs/ANSOR_MARKET_REQUIREMENTS.md`, `docs/ANSOR_MARKET_IMPLEMENTATION_PLAN.md`, `docs/ANSOR_MARKET_PROJECT_STATE.md`, and `docs/ANSOR_MARKET_TODO.md`. Start Phase 1 backend refactor only. Update Prisma schema and backend APIs for Ansor Market core models: User cleanup, UserAddress, MeasurementUnit, Product KRW fields, Order KRW/address snapshots, InventoryMovement, and notification kinds. Remove/deprecate backend coins/referrals/rewards/campaigns/segments/brands/fragrance modules from active imports only after dependent code is adjusted. Do not redesign architecture. After changes, run `pnpm --filter api build` and update the Ansor docs with files changed, build status, remaining work, and the next exact prompt.

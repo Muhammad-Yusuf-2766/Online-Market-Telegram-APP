@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { AdminUser } from "@prisma/client";
 import { JwtAdminGuard } from "../admin-auth/guards/jwt-admin.guard";
 import { CurrentAdmin } from "../common/decorators/current-admin.decorator";
-import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
+import { SearchablePaginationQueryDto } from "../common/dto/searchable-pagination-query.dto";
 import { AdminUsersMgmtService } from "./admin-users-mgmt.service";
 import { CreateAdminUserDto } from "./dto/create-admin-user.dto";
 import { UpdateAdminUserDto } from "./dto/update-admin-user.dto";
@@ -17,8 +17,8 @@ export class AdminUsersMgmtController {
 
   @Get()
   @ApiOperation({ summary: "List Super Admin users" })
-  list(@Query() query: PaginationQueryDto, @Query("q") q?: string) {
-    return this.service.findAll(query, q);
+  list(@Query() query: SearchablePaginationQueryDto) {
+    return this.service.findAll(query);
   }
 
   @Get(":id")

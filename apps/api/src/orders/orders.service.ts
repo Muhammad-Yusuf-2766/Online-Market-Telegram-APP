@@ -19,6 +19,7 @@ export type AdminOrderRow = Order & {
   user: {
     id: string;
     telegramId: string;
+    telegramUsername: string | null;
     firstName: string | null;
     lastName: string | null;
     phone: string | null;
@@ -239,6 +240,32 @@ export class OrdersService {
         where.createdAt.lte = new Date(`${query.createdTo}T23:59:59.999Z`);
       }
     }
+    const q = query.q?.trim();
+    if (q) {
+      where.OR = [
+        { id: { contains: q, mode: "insensitive" } },
+        { deliveryPhone: { contains: q } },
+        { deliveryFirstName: { contains: q, mode: "insensitive" } },
+        { deliveryLastName: { contains: q, mode: "insensitive" } },
+        { addressNameSnapshot: { contains: q, mode: "insensitive" } },
+        { roadAddressSnapshot: { contains: q, mode: "insensitive" } },
+        { jibunAddressSnapshot: { contains: q, mode: "insensitive" } },
+        { detailAddressSnapshot: { contains: q, mode: "insensitive" } },
+        {
+          user: {
+            is: {
+              OR: [
+                { telegramId: { contains: q } },
+                { telegramUsername: { contains: q, mode: "insensitive" } },
+                { firstName: { contains: q, mode: "insensitive" } },
+                { lastName: { contains: q, mode: "insensitive" } },
+                { phone: { contains: q } },
+              ],
+            },
+          },
+        },
+      ];
+    }
 
     const include = {
       items: true,
@@ -246,6 +273,7 @@ export class OrdersService {
         select: {
           id: true,
           telegramId: true,
+          telegramUsername: true,
           firstName: true,
           lastName: true,
           phone: true,
@@ -276,6 +304,7 @@ export class OrdersService {
           select: {
             id: true,
             telegramId: true,
+            telegramUsername: true,
             firstName: true,
             lastName: true,
             phone: true,
